@@ -84,7 +84,7 @@ services:
         condition: service_healthy
 
   # -----------------------------------------------------------
-  #  PostgreSQL 15 (Molt millor per alta concurrència)
+  #  PostgreSQL 15
   # -----------------------------------------------------------
   postgres:
     image: postgres:15-alpine
@@ -93,14 +93,14 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-root}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-root}
-      POSTGRES_DB: ${DB_DATABASE:-entrades}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: entrades
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-root}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
