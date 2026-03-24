@@ -1,0 +1,44 @@
+# ==========================================
+# 1. Variables d'entorn i Secrets (CRÍTIC)
+# ==========================================
+.env
+.env.dev
+.env.prod
+.env.local
+*.pem
+*.key
+
+# Deixem pujar només els exemples perquè l'equip sàpiga quines variables calen
+!.env.example
+!.env.dev.example
+!.env.prod.example
+
+# ==========================================
+# 2. Fitxers del Sistema Operatiu
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# 3. Configuracions de l'Editor (IDE)
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==========================================
+# 4. Arxius de logs i brossa general
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

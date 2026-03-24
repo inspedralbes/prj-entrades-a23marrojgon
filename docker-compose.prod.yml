@@ -1,0 +1,124 @@
+# =============================================================
+#  Docker Compose – PRODUCCIÓ
+#  Comanda: docker compose -f docker-compose.prod.yml up --build -d
+# =============================================================
+
+services:
+  # -----------------------------------------------------------
+  #  Nginx – Reverse Proxy amb SSL
+  # -----------------------------------------------------------
+  webserver:
+    image: nginx:1.25-alpine
+    container_name: entrades_webserver_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/default.prod.conf:/etc/nginx/templates/default.conf.template:ro
+      - api_storage:/var/www/html/storage:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    environment:
+      - DOMAIN=${DOMAIN}
+    depends_on:
+      - api
+      - client
+      - socket
+
+  # -----------------------------------------------------------
+  #  Backend – Laravel (Producció)
+  # -----------------------------------------------------------
+  api:
+    build:
+      context: ./api
+      target: production
+    container_name: entrades_api_prod
+    restart: always
+    env_file: .env
+    volumes:
+      - ./docker/php/php.prod.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+      - api_storage:/var/www/html/storage
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # -----------------------------------------------------------
+  #  Frontend – Next.js Server (SSR requerit)
+  # -----------------------------------------------------------
+  client:
+    build:
+      context: ./client
+      target: production
+    container_name: entrades_client_prod
+    restart: always
+    env_file: .env
+    command: ["npm", "run", "start"]
+
+  # -----------------------------------------------------------
+  #  Socket – Node.js + Socket.io
+  # -----------------------------------------------------------
+  socket:
+    build:
+      context: ./socket
+      target: production
+    container_name: entrades_socket_prod
+    restart: always
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+
+  # -----------------------------------------------------------
+  #  Bases de dades (Postgres + Redis)
+  # -----------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: entrades_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: entrades_redis_prod
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------
+  #  Certbot – Let's Encrypt SSL
+  # -----------------------------------------------------------
+  certbot:
+    image: certbot/certbot:latest
+    container_name: entrades_certbot_prod
+    restart: "no"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+volumes:
+  postgres_data:
+  redis_data:
+  api_storage:
+  certbot_www:
