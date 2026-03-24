@@ -43,7 +43,7 @@ services:
       redis:
         condition: service_healthy
 
-  # -----------------------------------------------------------
+# -----------------------------------------------------------
   #  Frontend – Next.js (React) Dev Server
   # -----------------------------------------------------------
   client:
@@ -61,6 +61,8 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8080/api
       - NEXT_PUBLIC_SOCKET_URL=http://localhost:8080
+      - WATCHPACK_POLLING=true      # <-- AFEGEIX AIXÒ
+      - CHOKIDAR_USEPOLLING=true    # <-- I AFEGEIX AIXÒ
 
   # -----------------------------------------------------------
   #  Socket – Node.js + Socket.io
