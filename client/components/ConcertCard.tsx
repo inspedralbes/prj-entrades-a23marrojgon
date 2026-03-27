@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TicketmasterEvent } from "@/types/ticketmaster";
 
 interface ConcertCardProps {
@@ -201,10 +202,8 @@ export default function ConcertCard({ event }: ConcertCardProps) {
           </div>
 
           {!isCancelled && (
-            <a
-              href={event.ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={`/events/${event.id}`}
               className={`px-4 py-2 rounded-lg text-sm font-semibold uppercase tracking-wider transition-all duration-300 ${
                 isSoldOut
                   ? "bg-surface border border-gray-600 text-gray-500 cursor-not-allowed pointer-events-none"
@@ -212,7 +211,7 @@ export default function ConcertCard({ event }: ConcertCardProps) {
               }`}
             >
               {isSoldOut ? "Esgotat" : "Comprar"}
-            </a>
+            </Link>
           )}
         </div>
       </div>

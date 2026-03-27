@@ -15,14 +15,17 @@ const TM_API_KEY = 'lFJAG9ubY1mX21DlDpzmfL5ZORyKksyq';
 const TM_BASE_URL = 'https://app.ticketmaster.com/discovery/v2/events.json';
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minuts (~288 req/dia)
 
-// Recintes destacats de Barcelona
-const HIGHLIGHTED_VENUES = [
-    'palau sant jordi',
-    'sant jordi club',
-    'razzmatazz',
+// Recintes amb els seus venueIds reals de Ticketmaster
+const TARGET_VENUES = [
+    { name: 'Palau Sant Jordi',  ids: ['Z598xZ2qZe6d7'] },
+    { name: 'Sant Jordi Club',   ids: ['Z198xZ2qZ1e1'] },
+    { name: 'Razzmatazz',        ids: ['Z198xZ2qZkeF', 'Z198xZ2qZd6k', 'Z198xZ2qZ771', 'Z598xZ2qZdvF1'] },
 ];
 
-// Cache persistent d'esdeveniments — NO s'esborren fins que passi la data
+// Tots els venueIds en un sol array per a referència ràpida
+const ALL_VENUE_IDS = TARGET_VENUES.flatMap(v => v.ids);
+
+// Cache persistent d'esdeveniments
 let cachedEvents = [];
 let lastFetchTime = null;
 let lastError = null;
@@ -39,10 +42,17 @@ function getBestImage(images) {
     return sorted[0].url;
 }
 
-function isHighlighted(venueName) {
-    if (!venueName) return false;
+/**
+ * Determina el nom normalitzat del recinte (Palau Sant Jordi / Sant Jordi Club / Razzmatazz)
+ */
+function getVenueLabel(venueName) {
+    if (!venueName) return 'Recinte desconegut';
     const lower = venueName.toLowerCase();
-    return HIGHLIGHTED_VENUES.some(hv => lower.includes(hv));
+    // Ordre important: "sant jordi club" abans de "sant jordi" per no confondre
+    if (lower.includes('sant jordi club')) return 'Sant Jordi Club';
+    if (lower.includes('palau sant jordi')) return 'Palau Sant Jordi';
+    if (lower.includes('razzmatazz') || lower.includes('razz')) return 'Razzmatazz';
+    return venueName; // fallback
 }
 
 function mapEvent(raw) {
@@ -57,56 +67,40 @@ function mapEvent(raw) {
             ? `${raw.dates.start.localDate}T${raw.dates.start.localTime || '00:00:00'}`
             : null,
         venue: venueName,
+        venueGroup: getVenueLabel(venueName),
         imageUrl: getBestImage(raw.images),
         salesStatus: raw.dates?.status?.code || 'unknown',
         priceMin: priceRanges?.[0]?.min ?? null,
         priceMax: priceRanges?.[0]?.max ?? null,
         ticketUrl: raw.url || '#',
-        isHighlightedVenue: isHighlighted(venueName),
-        // Guardem la classificació per mostrar-la
+        isHighlightedVenue: true, // Tots són de recintes destacats
         genre: raw.classifications?.[0]?.genre?.name || null,
         segment: raw.classifications?.[0]?.segment?.name || null,
     };
 }
 
-/**
- * Filtra esdeveniments que ja han passat (data anterior a avui).
- * Els esdeveniments sense data es mantenen.
- */
 function filterPastEvents(events) {
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Inici del dia actual
+    now.setHours(0, 0, 0, 0);
     return events.filter(event => {
-        if (!event.dateTime) return true; // Sense data → mantenir
+        if (!event.dateTime) return true;
         const eventDate = new Date(event.dateTime);
-        return eventDate >= now; // Mantenir si la data és avui o futura
+        return eventDate >= now;
     });
 }
 
-/**
- * Fusiona nous esdeveniments amb els cacheats.
- * - Afegeix nous events que no existien
- * - Actualitza events existents (estat de venda, preus, etc.)
- * - Manté events antics que encara no han passat
- */
 function mergeEvents(cached, fresh) {
-    const freshMap = new Map(fresh.map(e => [e.id, e]));
     const mergedMap = new Map();
 
-    // Primer: afegir tots els events cacheats (els que no hagin passat)
     for (const event of cached) {
         mergedMap.set(event.id, event);
     }
-
-    // Segon: actualitzar/afegir amb els fresh
     for (const event of fresh) {
-        mergedMap.set(event.id, event); // Sobreescriu amb dades actualitzades
+        mergedMap.set(event.id, event);
     }
 
-    // Filtrar els que ja han passat
     const merged = filterPastEvents(Array.from(mergedMap.values()));
 
-    // Ordenar per data ascendent
     merged.sort((a, b) => {
         if (!a.dateTime) return 1;
         if (!b.dateTime) return -1;
@@ -116,53 +110,64 @@ function mergeEvents(cached, fresh) {
     return merged;
 }
 
-// ─── Fetch de Ticketmaster ──────────────────────────────────
+// ─── Fetch per Venue ────────────────────────────────────────
 
-async function fetchTicketmasterEvents() {
+/**
+ * Fa un fetch per un venueId concret. Retorna els events mappejats.
+ */
+async function fetchEventsForVenue(venueId) {
+    const params = new URLSearchParams({
+        apikey: TM_API_KEY,
+        venueId: venueId,
+        size: '200',  // Màxim permès per l'API
+        sort: 'date,asc',
+    });
+
+    const url = `${TM_BASE_URL}?${params.toString()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status} per venue ${venueId}`);
+    }
+
+    const data = await response.json();
+    const rawEvents = data._embedded?.events || [];
+    return rawEvents.map(mapEvent);
+}
+
+/**
+ * Fa fetch de TOTS els events dels 3 recintes.
+ * Fa les peticions seqüencialment amb un petit delay per evitar rate limiting.
+ */
+async function fetchAllVenueEvents() {
     try {
-        // Buscar TOTS els esdeveniments a Barcelona (sense filtrar per classificació)
-        const params = new URLSearchParams({
-            apikey: TM_API_KEY,
-            city: 'Barcelona',
-            countryCode: 'ES',
-            size: '100',        // Màxim: 200, però 100 és raonable
-            sort: 'date,asc',
-        });
+        console.log(`[Ticketmaster] Polling tots els recintes… ${new Date().toISOString()}`);
 
-        const url = `${TM_BASE_URL}?${params.toString()}`;
-        console.log(`[Ticketmaster] Polling… ${new Date().toISOString()}`);
+        const allEvents = [];
 
-        const response = await fetch(url);
-
-        if (response.status === 401) {
-            const errorMsg = 'API Key no autoritzada (401). Comprova que la clau estigui activada al portal de Ticketmaster.';
-            console.error(`[Ticketmaster] ❌ ${errorMsg}`);
-            lastError = errorMsg;
-            return null;
+        for (const venue of TARGET_VENUES) {
+            for (const venueId of venue.ids) {
+                try {
+                    const events = await fetchEventsForVenue(venueId);
+                    allEvents.push(...events);
+                    console.log(`  → ${venue.name} (${venueId}): ${events.length} events`);
+                } catch (err) {
+                    console.error(`  ✗ ${venue.name} (${venueId}): ${err.message}`);
+                }
+                // Petit delay entre peticions per evitar rate limit (100 req/min)
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
         }
 
-        if (response.status === 429) {
-            console.error('[Ticketmaster] ⚠️ Rate limit assolit. Esperant al pròxim cicle.');
-            lastError = 'Rate limit assolit. Reintentant en 5 minuts.';
-            return null;
-        }
+        // Deduplicar per id (un event pot aparèixer en múltiples sales Razzmatazz)
+        const uniqueMap = new Map(allEvents.map(e => [e.id, e]));
+        const unique = Array.from(uniqueMap.values());
 
-        if (!response.ok) {
-            const errorMsg = `HTTP Error: ${response.status} ${response.statusText}`;
-            console.error(`[Ticketmaster] ❌ ${errorMsg}`);
-            lastError = errorMsg;
-            return null;
-        }
-
-        const data = await response.json();
-        const rawEvents = data._embedded?.events || [];
-        const mapped = rawEvents.map(mapEvent);
-
-        lastError = null; // Resetejar error si tot va bé
-        console.log(`[Ticketmaster] ✅ ${mapped.length} esdeveniments trobats`);
-        return mapped;
+        lastError = null;
+        console.log(`[Ticketmaster] ✅ Total: ${unique.length} esdeveniments únics als recintes clau`);
+        return unique;
     } catch (err) {
-        const errorMsg = `Error de xarxa: ${err.message}`;
+        const errorMsg = `Error general: ${err.message}`;
         console.error(`[Ticketmaster] ❌ ${errorMsg}`);
         lastError = errorMsg;
         return null;
@@ -170,19 +175,16 @@ async function fetchTicketmasterEvents() {
 }
 
 async function pollAndEmit() {
-    const freshEvents = await fetchTicketmasterEvents();
+    const freshEvents = await fetchAllVenueEvents();
 
     if (freshEvents !== null) {
-        // Fusionar amb cache (manté events antics que no han passat)
         cachedEvents = mergeEvents(cachedEvents, freshEvents);
     } else {
-        // Encara sense dades noves, filtrar events passats del cache existent
         cachedEvents = filterPastEvents(cachedEvents);
     }
 
     lastFetchTime = new Date().toISOString();
 
-    // Emetre a tots els clients de la room 'concerts'
     io.to('concerts').emit('ticketmaster:events', {
         events: cachedEvents,
         lastUpdated: lastFetchTime,
@@ -200,7 +202,6 @@ io.on('connection', (socket) => {
         socket.join('concerts');
         console.log(`[${socket.id}] s'ha unit a la room 'concerts'`);
 
-        // Enviar dades cacheades + estat d'error immediatament
         socket.emit('ticketmaster:events', {
             events: cachedEvents,
             lastUpdated: lastFetchTime,
@@ -224,11 +225,9 @@ const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, async () => {
     console.log(`Servidor de Sockets actiu al port ${PORT} 🚀`);
-    console.log(`Ticketmaster polling cada ${POLL_INTERVAL_MS / 1000}s`);
+    console.log(`Recintes monitoritzats: ${TARGET_VENUES.map(v => v.name).join(', ')}`);
+    console.log(`Polling cada ${POLL_INTERVAL_MS / 1000}s (~${Math.round(ALL_VENUE_IDS.length * 24 * 60 / (POLL_INTERVAL_MS / 60000))} req/dia)`);
 
-    // Primer fetch immediat
     await pollAndEmit();
-
-    // Polling periòdic
     setInterval(pollAndEmit, POLL_INTERVAL_MS);
 });

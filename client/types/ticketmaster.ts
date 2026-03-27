@@ -3,6 +3,7 @@ export interface TicketmasterEvent {
   name: string;
   dateTime: string | null;
   venue: string;
+  venueGroup?: string;
   imageUrl: string;
   salesStatus: string;
   priceMin: number | null;
