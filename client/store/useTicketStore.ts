@@ -8,6 +8,8 @@ export interface Seat {
   col: number;
   status: SeatState;
   price: number;
+  isPMR?: boolean;
+  isAisle?: boolean;
 }
 
 interface TicketStore {
