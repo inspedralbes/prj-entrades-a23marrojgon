@@ -11,37 +11,49 @@ export default function ConcertDashboard() {
     useConcertStore();
 
   useEffect(() => {
+    // 1. HTTP Fetch per obtenir la dada inicial des de Laravel
+    const fetchConcerts = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const res = await fetch(`${apiUrl}/concerts`);
+        
+        if (!res.ok) {
+          throw new Error(`Error de xarxa: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        setEvents(data.events || []);
+        setLastUpdated(data.lastUpdated);
+        setError(data.error);
+      } catch (err: any) {
+        setError(err.message || 'Error desconegut connectant amb la API');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConcerts();
+
+    // 2. Mantenim la connexió de sockets per al temps real d'altres features (seients)
     if (!socket.connected) {
       socket.connect();
     }
 
     socket.emit("join:concerts");
 
-    const handleEvents = (data: { events: TicketmasterEvent[]; lastUpdated: string; error: string | null }) => {
-      setEvents(data.events);
-      setLastUpdated(data.lastUpdated);
-      setError(data.error);
-    };
-
-    socket.on("ticketmaster:events", handleEvents);
     socket.on("connect", () => {
       setConnected(true);
       socket.emit("join:concerts");
     });
+    
     socket.on("disconnect", () => setConnected(false));
 
     if (socket.connected) {
       setConnected(true);
     }
 
-    const timeout = setTimeout(() => {
-      if (events.length === 0) setLoading(false);
-    }, 15000);
-
     return () => {
-      socket.off("ticketmaster:events", handleEvents);
       socket.emit("leave:concerts");
-      clearTimeout(timeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
