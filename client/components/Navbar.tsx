@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function Navbar() {
   const { user, isAuthenticated, clearAuth } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // No mostrem la Navbar a les pàgines d'autenticació
+  if (pathname === '/login' || pathname === '/register') {
+    return null;
+  }
 
   const handleLogout = async () => {
     // Intentem fer el logout al backend també
