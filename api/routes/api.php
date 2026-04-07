@@ -20,6 +20,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::get('/stats', [AdminController::class, 'stats']);
         Route::get('/users', [AdminController::class, 'users']);
+        Route::post('/sync-ticketmaster', [AdminController::class, 'syncTicketmaster']);
         Route::get('/concerts', [AdminController::class, 'concerts']);
         Route::post('/concerts', [AdminController::class, 'storeConcert']);
         Route::put('/concerts/{id}', [AdminController::class, 'updateConcert']);

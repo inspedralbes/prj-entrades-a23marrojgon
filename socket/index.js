@@ -11,13 +11,17 @@ const io = new Server(server, {
 
 // ─── Socket.IO Connexions ───────────────────────────────────
 
-io.on('connection', (socket) => {
-    console.log(`Un usuari s'ha connectat al WebSocket (${socket.id})`);
+let connectedUsersCount = 0;
 
-    // Pot ser útil per a esdeveniments en temps real en el futur (ex: seients bloquejats)
+io.on('connection', (socket) => {
+    connectedUsersCount++;
+    console.log(`Un usuari s'ha connectat (${socket.id}). Total: ${connectedUsersCount}`);
+    
+    // Notificar a tothom el nou comptador
+    io.emit('admin:stats', { activeUsers: connectedUsersCount });
+
     socket.on('join:concerts', () => {
         socket.join('concerts');
-        console.log(`[${socket.id}] s'ha unit a la room 'concerts'`);
     });
 
     socket.on('leave:concerts', () => {
@@ -25,7 +29,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log(`Usuari desconnectat (${socket.id})`);
+        connectedUsersCount = Math.max(0, connectedUsersCount - 1);
+        console.log(`Usuari desconnectat. Total: ${connectedUsersCount}`);
+        io.emit('admin:stats', { activeUsers: connectedUsersCount });
     });
 });
 

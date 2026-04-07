@@ -10,6 +10,7 @@ class Concert extends Model
     use HasFactory;
 
     protected $fillable = [
+        'tm_id',
         'name',
         'description',
         'date',

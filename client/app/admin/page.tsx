@@ -4,13 +4,28 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import Link from 'next/link';
+import { io } from 'socket.io-client';
 
 export default function AdminPage() {
   const { user, isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
 
   const [stats, setStats] = useState<any>(null);
+  const [activeUsers, setActiveUsers] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Connexió al WebSocket
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001');
+
+    socket.on('admin:stats', (data: { activeUsers: number }) => {
+      setActiveUsers(data.activeUsers);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -112,7 +127,7 @@ export default function AdminPage() {
         <div className="bg-surface/30 backdrop-blur-xl border border-white/5 p-6 rounded-2xl hover:border-yellow-500/30 transition-all group relative overflow-hidden">
           <h3 className="text-white/30 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Usuaris Actius</h3>
           <div className="text-4xl font-black text-white group-hover:text-yellow-500 transition-colors tracking-tighter">
-            {stats.users_count}
+            {activeUsers}
           </div>
           <div className="mt-4 flex items-center gap-2 text-yellow-500/40 text-[9px] uppercase font-bold tracking-widest italic">
             Sincronitzat amb DB

@@ -11,6 +11,7 @@ export default function AdminConcerts() {
   const [isFetching, setIsFetching] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingConcert, setEditingConcert] = useState<any>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -45,6 +46,28 @@ export default function AdminConcerts() {
       console.error('Error fetching concerts:', error);
     } finally {
       setIsFetching(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      const token = localStorage.getItem('tixflow_token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/sync-ticketmaster`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      const data = await response.json();
+      alert(data.message);
+      fetchConcerts();
+    } catch (error) {
+      console.error('Error syncing:', error);
+      alert('Error en la sincronització');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -116,12 +139,25 @@ export default function AdminConcerts() {
           <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">Gestió de <span className="text-cyan">Concerts</span></h2>
           <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Base de dades local activa</p>
         </div>
-        <button 
-          onClick={() => { setEditingConcert(null); setShowModal(true); }}
-          className="bg-cyan text-black px-6 py-2 rounded-lg font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-[0_0_15px_rgba(0,240,255,0.3)]"
-        >
-          Afegir Concert
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={handleSync}
+            disabled={isSyncing}
+            className={`px-6 py-2 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all ${
+              isSyncing 
+                ? 'bg-white/10 text-white/30 cursor-not-allowed' 
+                : 'bg-magenta/20 text-magenta border border-magenta/50 hover:bg-magenta hover:text-black shadow-[0_0_15px_rgba(255,0,255,0.2)]'
+            }`}
+          >
+            {isSyncing ? 'Sincronitzant...' : 'Sincronitzar Ticketmaster'}
+          </button>
+          <button 
+            onClick={() => { setEditingConcert(null); setShowModal(true); }}
+            className="bg-cyan text-black px-6 py-2 rounded-lg font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+          >
+            Afegir Concert
+          </button>
+        </div>
       </div>
 
       {/* Table */}
