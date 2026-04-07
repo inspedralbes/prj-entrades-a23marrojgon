@@ -1,4 +1,5 @@
 import ConcertDashboard from "@/components/ConcertDashboard";
+import AuthGuard from "@/components/AuthGuard";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,8 +10,10 @@ export const metadata: Metadata = {
 
 export default function ConcertsPage() {
   return (
-    <div className="container mx-auto px-4 py-10">
-      <ConcertDashboard />
-    </div>
+    <AuthGuard>
+      <div className="container mx-auto px-4 py-10">
+        <ConcertDashboard />
+      </div>
+    </AuthGuard>
   );
 }

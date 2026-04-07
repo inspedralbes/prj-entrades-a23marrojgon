@@ -1,147 +1,101 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-// import { socket } from "@/lib/socket"; // Pel temps real en servidor final
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/useAuthStore';
+import Link from 'next/link';
 
-export default function AdminDashboard() {
-  // Mock d'Estadístiques
-  const [stats, setStats] = useState({
-    activeConnections: 124,
-    totalSales: 48500,
-    seats: {
-      total: 5000,
-      sold: 3421,
-      reserved: 245,
-      available: 1334
-    }
-  });
+export default function AdminPage() {
+  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const router = useRouter();
 
-  // Simulem actualitzacions en temps real
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(prev => ({
-        ...prev,
-        activeConnections: prev.activeConnections + Math.floor(Math.random() * 5) - 2,
-        // Petites variacions per donar vida a les reserves i el temps real
-      }));
-    }, 2000);
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (user?.email !== 'admin@tixflow.com') {
+        router.push('/');
+      }
+    }
+  }, [isAuthenticated, user, isLoading, router]);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  const occupancyRate = ((stats.seats.sold + stats.seats.reserved) / stats.seats.total) * 100;
+  if (isLoading || !isAuthenticated || user?.email !== 'admin@tixflow.com') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-cyan">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-cyan/20 border-t-cyan rounded-full animate-spin"></div>
+          <p className="uppercase tracking-[0.3em] text-sm animate-pulse">Verificant Credencials...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-cyan/20 pb-6">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <span className="text-cyan">TixFlow</span> Admin
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">Control de recintes i mètriques en Temps Real</p>
-        </div>
-        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-full">
-          <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
-          <span className="text-emerald-400 text-sm font-medium tracking-wide">Servidors Operatius</span>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-surface p-6 rounded-xl border border-cyan/20 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-bl-[100px] z-0"></div>
-          <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2 relative z-10">Usuaris Connectats</h3>
-          <p className="text-4xl font-bold text-white relative z-10">{stats.activeConnections}</p>
-          <div className="mt-2 text-xs text-blue-400 font-medium">Sockets actius (en viu)</div>
-        </div>
-
-        <div className="bg-surface p-6 rounded-xl border border-cyan/20 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-magenta/10 rounded-bl-[100px] z-0"></div>
-          <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2 relative z-10">Ingressos (Avui)</h3>
-          <p className="text-4xl font-bold text-white relative z-10">{stats.totalSales.toLocaleString()}€</p>
-          <div className="mt-2 text-xs text-magenta font-medium">+12% des d'ahir</div>
-        </div>
-
-        <div className="bg-surface p-6 rounded-xl border border-cyan/20 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-cyan/10 rounded-bl-[100px] z-0"></div>
-          <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2 relative z-10">Ocupació Total</h3>
-          <p className="text-4xl font-bold text-white relative z-10">{occupancyRate.toFixed(1)}%</p>
-          <div className="mt-3 w-full bg-background rounded-full h-1.5">
-            <div className="bg-cyan h-1.5 rounded-full" style={{ width: `${occupancyRate}%` }}></div>
+    <div className="min-h-[calc(100vh-64px)] p-8 bg-background">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8 border-b border-cyan/20 pb-6">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tighter text-cyan drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]">
+              PANEL D'ADMINISTRACIÓ
+            </h1>
+            <p className="text-foreground/60 uppercase tracking-widest text-xs mt-2">
+              Benvingut al nucli del sistema, {user?.name}
+            </p>
+          </div>
+          <div className="bg-cyan/10 border border-cyan/50 px-4 py-2 rounded-lg flex items-center gap-3">
+            <div className="w-2 h-2 bg-cyan rounded-full animate-ping"></div>
+            <span className="text-cyan text-xs font-bold uppercase tracking-widest">SISTEMA ONLINE</span>
           </div>
         </div>
 
-        <div className="bg-surface p-6 rounded-xl border border-cyan/20 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-bl-[100px] z-0"></div>
-          <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2 relative z-10">Overbooking Evitat</h3>
-          <p className="text-4xl font-bold text-white relative z-10">45</p>
-          <div className="mt-2 text-xs text-amber-500 font-medium">Bloquejats per Concurrència (PostgreSQL)</div>
-        </div>
-      </div>
-
-      {/* Gràfic / Llista principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-surface p-6 rounded-xl border border-cyan/20">
-          <h3 className="text-xl font-bold mb-6 text-white border-b border-cyan/20 pb-3">Estat de Seients (Esdeveniment Actual)</h3>
-          
-          <div className="flex flex-col md:flex-row gap-6 items-center justify-center py-6">
-            {/* Donut Chart Simulat */}
-            <div className="relative w-48 h-48 rounded-full border-[16px] border-surface flex items-center justify-center 
-              shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]"
-              style={{
-                background: `conic-gradient(
-                  #ef4444 0% ${(stats.seats.sold/stats.seats.total)*100}%,
-                  #f59e0b ${(stats.seats.sold/stats.seats.total)*100}% ${((stats.seats.sold+stats.seats.reserved)/stats.seats.total)*100}%,
-                  #10b981 ${((stats.seats.sold+stats.seats.reserved)/stats.seats.total)*100}% 100%
-                )`
-              }}
-            >
-              <div className="w-32 h-32 bg-surface rounded-full flex flex-col items-center justify-center z-10">
-                <span className="text-xs text-gray-400 uppercase">Aforament</span>
-                <span className="text-xl font-bold">{stats.seats.total}</span>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Stats card */}
+          <div className="bg-surface/40 backdrop-blur-md border border-cyan/10 p-6 rounded-xl hover:border-cyan/30 transition-all group">
+            <h3 className="text-foreground/40 text-xs font-bold uppercase tracking-widest mb-4">Vendes Totals</h3>
+            <div className="text-3xl font-bold text-foreground group-hover:text-cyan transition-colors">1.284,50 €</div>
+            <div className="mt-2 text-green-400 text-xs flex items-center gap-1 font-bold">
+              <span>↑ 12%</span>
+              <span className="text-foreground/20 font-normal underline underline-offset-4 decoration-cyan/20">Aquesta setmana</span>
             </div>
+          </div>
 
-            <div className="flex flex-col gap-4 font-mono text-sm w-full md:w-auto">
-              <div className="flex items-center justify-between gap-4 bg-background p-3 rounded border-l-4 border-red-500">
-                <span className="text-gray-300">Venuts (Consolidats)</span>
-                <span className="text-white font-bold text-lg">{stats.seats.sold}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4 bg-background p-3 rounded border-l-4 border-amber-500">
-                <span className="text-gray-300">Reservats (Temporals)</span>
-                <span className="text-white font-bold text-lg">{stats.seats.reserved}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4 bg-background p-3 rounded border-l-4 border-emerald-500">
-                <span className="text-gray-300">Disponibles</span>
-                <span className="text-white font-bold text-lg">{stats.seats.available}</span>
-              </div>
+          <div className="bg-surface/40 backdrop-blur-md border border-cyan/10 p-6 rounded-xl hover:border-cyan/30 transition-all group">
+            <h3 className="text-foreground/40 text-xs font-bold uppercase tracking-widest mb-4">Entrades Venudes</h3>
+            <div className="text-3xl font-bold text-foreground group-hover:text-cyan transition-colors">42</div>
+            <div className="mt-2 text-cyan/60 text-xs font-bold">
+              <span>Capacitat: 85%</span>
+            </div>
+          </div>
+
+          <div className="bg-surface/40 backdrop-blur-md border border-cyan/10 p-6 rounded-xl hover:border-cyan/30 transition-all group">
+            <h3 className="text-foreground/40 text-xs font-bold uppercase tracking-widest mb-4">Alertes de Sistema</h3>
+            <div className="text-3xl font-bold text-foreground group-hover:text-pink-500 transition-colors">0</div>
+            <div className="mt-2 text-green-400 text-xs font-bold">
+              <span>Operació normal</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-surface p-6 rounded-xl border border-cyan/20 flex flex-col">
-          <h3 className="text-xl font-bold mb-4 text-white border-b border-cyan/20 pb-3">Registre d'Activitat</h3>
-          <div className="flex-1 overflow-y-auto max-h-[300px] pr-2 space-y-3 font-mono text-xs">
-            <div className="flex gap-2">
-              <span className="text-cyan">[10:24:32]</span>
-              <span className="text-gray-300">Socket: Compra confirmada seient C12</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="text-amber-500">[10:24:28]</span>
-              <span className="text-gray-300">PostgreSQL: Bloqueig temporal concedit D4</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="text-red-400">[10:24:20]</span>
-              <span className="text-gray-300 text-opacity-80">Failed: Conflicte de concurrència seient F1 (Intent 2)</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="text-cyan">[10:24:15]</span>
-              <span className="text-gray-300">Nova connexió client id: #a8b9...</span>
-            </div>
-            <div className="flex gap-2">
-              <span className="text-cyan">[10:23:59]</span>
-              <span className="text-gray-300">Socket: Compra confirmada seient A1, A2</span>
-            </div>
+        <div className="mt-12 bg-surface/20 border border-cyan/5 rounded-2xl p-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-cyan/10 rounded-full mb-6 border border-cyan/20">
+            <svg className="w-8 h-8 text-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-4 tracking-tight">Eines de Gestió</h2>
+          <p className="text-foreground/40 max-w-md mx-auto mb-8">
+            Aquí podràs gestionar els concerts, els usuaris i veure les estadístiques en temps real de les vendes.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <button className="px-6 py-2 bg-cyan/10 border border-cyan/30 text-cyan rounded hover:bg-cyan/20 transition-all uppercase text-xs font-bold tracking-widest">
+              Gestionar Concerts
+            </button>
+            <button className="px-6 py-2 bg-cyan/10 border border-cyan/30 text-cyan rounded hover:bg-cyan/20 transition-all uppercase text-xs font-bold tracking-widest">
+              Llista d'Usuaris
+            </button>
+            <Link href="/" className="px-6 py-2 bg-foreground/5 text-foreground/40 border border-foreground/10 rounded hover:bg-foreground/10 transition-all uppercase text-xs font-bold tracking-widest">
+              Tornar a l'Inici
+            </Link>
           </div>
         </div>
       </div>
