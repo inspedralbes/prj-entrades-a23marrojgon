@@ -15,6 +15,7 @@ Route::get('/concerts', [ConcertController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/checkout', [\App\Http\Controllers\CheckoutController::class, 'process']);
 
     // Admin routes
     Route::prefix('admin')->middleware('admin')->group(function () {

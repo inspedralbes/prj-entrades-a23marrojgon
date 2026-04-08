@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('concert_id')->constrained()->onDelete('cascade');
+            $table->string('concert_id');
             $table->decimal('price', 8, 2);
             $table->string('seat_info')->nullable();
             $table->string('status')->default('confirmed'); // confirmed, pending, cancelled

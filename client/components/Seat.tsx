@@ -8,8 +8,8 @@ interface SeatProps {
 }
 
 export default function Seat({ seat, onClick }: SeatProps) {
-  const { selectedSeatIds } = useTicketStore();
-  const isSelected = selectedSeatIds.includes(seat.id);
+  const { selectedSeats } = useTicketStore();
+  const isSelected = selectedSeats.some(s => s.id === seat.id);
 
   // Espai buit de passadís
   if (seat.isAisle) {
@@ -27,7 +27,7 @@ export default function Seat({ seat, onClick }: SeatProps) {
 
   const handleSeatClick = () => {
     if (seat.status === 'sold' || seat.status === 'reserved') return;
-    if (selectedSeatIds.length >= 6 && !isSelected) return;
+    if (selectedSeats.length >= 5 && !isSelected) return;
     if (onClick) onClick();
   };
 

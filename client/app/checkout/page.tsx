@@ -4,48 +4,85 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTicketStore } from '@/store/useTicketStore';
 import Timer from '@/components/Timer';
+import { socket } from '@/lib/socket';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { seats, selectedSeatIds, updateSeatStatus, clearSelection, setTimer } = useTicketStore();
+  const { selectedSeats, updateSeatStatus, clearSelection, setTimer } = useTicketStore();
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Detalls dels seients escullits
-  const selectedSeatsInfo = seats.filter(s => selectedSeatIds.includes(s.id));
+  // Detalls dels seients escullits (ara ja venen complets de l'Store)
+  const selectedSeatsInfo = selectedSeats;
   const totalPrice = selectedSeatsInfo.reduce((sum, seat) => sum + seat.price, 0);
 
   // Redirigir a la home si no hi ha seients
   useEffect(() => {
-    if (selectedSeatIds.length === 0 && !isProcessing) {
+    if (selectedSeats.length === 0 && !isProcessing) {
       router.push('/');
     }
-  }, [selectedSeatIds, router, isProcessing]);
+  }, [selectedSeats, router, isProcessing]);
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    // Simulem el delay d'un pagament
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const concertId = selectedSeats[0]?.id.split('-')[0] || 'Unknown'; // Aproximació de concert ID
 
-    // Confirmem el pagament, canviant l'estat dels seients a "sold" localment
-    selectedSeatIds.forEach(id => {
-      updateSeatStatus(id, 'sold');
-    });
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('tixflow_token')}`
+        },
+        body: JSON.stringify({
+          concert_id: concertId,
+          seats: selectedSeatsInfo.map(s => ({
+            id: s.id,
+            price: s.price,
+            row: s.row,
+            col: s.col,
+            zone: s.row // Simplificació per ara, s.zone si s'afegís al tipus
+          })),
+          email: formData.get('email'),
+          name: formData.get('name')
+        })
+      });
 
-    // En un cas real faríem:
-    // await fetch('/api/checkout', { method: 'POST', body: ... })
-    // if success -> socket.emit('seat:sold', { seats: selectedSeatIds })
-    
-    // Netejar la selecció i parar el timer
-    clearSelection();
-    setTimer(0, 0);
-    
-    // Anem als tickets
-    router.push('/tickets');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error en el pagament');
+      }
+
+      const result = await response.json();
+      
+      // Marcar com a venuts localment i notificar sockets
+      selectedSeats.forEach(seat => {
+        updateSeatStatus(seat.id, 'sold');
+        // Notificar al servidor de sockets que aquesta butaca s'ha venut
+        socket.emit('seat:sold', { 
+            concertId, 
+            zoneId: seat.id.split('-')[1], // Extreure zona de l'ID si és possible o passar-la al store
+            seatId: seat.id 
+        });
+      });
+
+      alert('¡Compra realitzada amb èxit! Rebràs un correu amb les teves entrades en uns segons.');
+
+      clearSelection();
+      setTimer(0, 0);
+      router.push('/tickets');
+      
+    } catch (error: any) {
+      console.error(error);
+      alert(`Error: ${error.message || 'Hi ha hagut un error processant el pagament.'}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  if (selectedSeatIds.length === 0 && !isProcessing) return null;
+  if (selectedSeats.length === 0 && !isProcessing) return null;
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-5xl">
@@ -71,35 +108,14 @@ export default function CheckoutPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Nom complet</label>
-                <input required type="text" className="w-full bg-background border border-cyan/30 rounded p-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan transition-all" placeholder="Ada Lovelace" />
+                <input required name="name" type="text" className="w-full bg-background border border-cyan/30 rounded p-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan transition-all" placeholder="Ada Lovelace" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Correu electrònic</label>
-                <input required type="email" className="w-full bg-background border border-cyan/30 rounded p-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan transition-all" placeholder="ada@cyberpunk.net" />
+                <input required name="email" type="email" className="w-full bg-background border border-cyan/30 rounded p-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan transition-all" placeholder="ada@cyberpunk.net" />
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-white pt-4 mt-4 border-t border-cyan/20">
-              Pagament
-            </h3>
-
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">Número de Targeta</label>
-                <input required type="text" className="w-full bg-background border border-cyan/30 rounded p-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan transition-all font-mono" placeholder="4111 •••• •••• ••••" />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-300">Caducitat</label>
-                  <input required type="text" className="w-full bg-background border border-cyan/30 rounded p-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan transition-all font-mono" placeholder="MM/YY" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-300">CVC</label>
-                  <input required type="text" className="w-full bg-background border border-cyan/30 rounded p-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan transition-all font-mono" placeholder="123" />
-                </div>
-              </div>
-            </div>
 
             <div className="mt-8 flex-1 flex flex-col justify-end">
               <button 
@@ -116,7 +132,7 @@ export default function CheckoutPage() {
                     Processant Pagament...
                   </>
                 ) : (
-                  `Pagar ${totalPrice}€`
+                  `Confirmar Compra - ${totalPrice}€`
                 )}
               </button>
             </div>

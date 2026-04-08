@@ -54,19 +54,29 @@ interface ZoneLayout {
 function getZoneLayout(zoneId: string): ZoneLayout {
   switch (zoneId) {
 
-    // ─── ZONES DRETA (STANDING) ───────────────────────
+    // ─── PISTA / FRONT STAGE (Interactivitzat) ───────
     case "front-stage":
       return {
-        sectionLabel: "FRONT STAGE · Zona Dreta",
-        isStanding: true,
-        rows: [],
+        sectionLabel: "FRONT STAGE · Proximitat Escenari",
+        isStanding: false,
+        rows: Array.from({ length: 15 }, (_, i) => ({
+          label: `FS${i + 1}`,
+          seatsLeft: 12,
+          seatsRight: 12,
+          indent: 0
+        })),
       };
 
     case "pista-general":
       return {
-        sectionLabel: "PISTA GENERAL · Zona Dreta",
-        isStanding: true,
-        rows: [],
+        sectionLabel: "PISTA GENERAL · Asseients Numerats",
+        isStanding: false,
+        rows: Array.from({ length: 25 }, (_, i) => ({
+          label: `P${i + 1}`,
+          seatsLeft: 15,
+          seatsRight: 15,
+          indent: 0
+        })),
       };
 
     // ─── GRADA INFERIOR ESQUERRA (Sectors 109-111) ────
@@ -75,20 +85,13 @@ function getZoneLayout(zoneId: string): ZoneLayout {
         sectionLabel: "GRADA INFERIOR ESQUERRA · Sectors 109-111",
         isStanding: false,
         rows: [
-          // Sector 109-110-111 combinat, files corbes
-          { label: "1",  seatsLeft: 6,  seatsRight: 6,  indent: 5 },
-          { label: "2",  seatsLeft: 7,  seatsRight: 7,  indent: 4 },
-          { label: "3",  seatsLeft: 7,  seatsRight: 8,  indent: 4 },
-          { label: "4",  seatsLeft: 8,  seatsRight: 8,  indent: 3 },
-          { label: "5",  seatsLeft: 8,  seatsRight: 9,  indent: 3 },
-          { label: "6",  seatsLeft: 9,  seatsRight: 9,  indent: 2 },
-          { label: "7",  seatsLeft: 9,  seatsRight: 10, indent: 2 },
-          { label: "8",  seatsLeft: 10, seatsRight: 10, indent: 1 },
-          { label: "9",  seatsLeft: 10, seatsRight: 10, indent: 1 },
-          { label: "10", seatsLeft: 10, seatsRight: 11, indent: 0 },
-          { label: "11", seatsLeft: 11, seatsRight: 11, indent: 0 },
-          { label: "12", seatsLeft: 11, seatsRight: 11, indent: 0 },
-          { label: "WC", seatsLeft: 0,  seatsRight: 0,  indent: 0, pmrLeft: 3, pmrRight: 3 },
+          ...Array.from({ length: 18 }, (_, i) => ({
+            label: (i + 1).toString(),
+            seatsLeft: 8 + Math.floor(i / 2),
+            seatsRight: 8 + Math.floor(i / 2),
+            indent: Math.max(0, 10 - i)
+          })),
+          { label: "WC", seatsLeft: 0,  seatsRight: 0,  indent: 0, pmrLeft: 4, pmrRight: 4 },
         ],
       };
 
@@ -120,20 +123,12 @@ function getZoneLayout(zoneId: string): ZoneLayout {
         sectionLabel: "GRADA INFERIOR FONS · Sectors 104-108",
         isStanding: false,
         rows: [
-          { label: "1",  seatsLeft: 10, seatsRight: 10, indent: 5 },
-          { label: "2",  seatsLeft: 11, seatsRight: 11, indent: 4 },
-          { label: "3",  seatsLeft: 12, seatsRight: 12, indent: 4 },
-          { label: "4",  seatsLeft: 12, seatsRight: 13, indent: 3 },
-          { label: "5",  seatsLeft: 13, seatsRight: 13, indent: 3 },
-          { label: "6",  seatsLeft: 14, seatsRight: 14, indent: 2 },
-          { label: "7",  seatsLeft: 14, seatsRight: 14, indent: 2 },
-          { label: "8",  seatsLeft: 15, seatsRight: 15, indent: 1 },
-          { label: "9",  seatsLeft: 15, seatsRight: 15, indent: 1 },
-          { label: "10", seatsLeft: 16, seatsRight: 16, indent: 0 },
-          { label: "11", seatsLeft: 16, seatsRight: 16, indent: 0 },
-          { label: "12", seatsLeft: 17, seatsRight: 17, indent: 0 },
-          { label: "13", seatsLeft: 17, seatsRight: 17, indent: 0 },
-          { label: "14", seatsLeft: 16, seatsRight: 16, indent: 0 },
+          ...Array.from({ length: 25 }, (_, i) => ({
+            label: (i + 1).toString(),
+            seatsLeft: 10 + Math.floor(i / 2),
+            seatsRight: 10 + Math.floor(i / 2),
+            indent: Math.max(0, 5 - Math.floor(i / 3))
+          })),
           { label: "WC", seatsLeft: 0,  seatsRight: 0,  indent: 0, pmrLeft: 4, pmrRight: 4 },
         ],
       };
@@ -287,7 +282,7 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
 // ═══════════════════════════════════════════════════════
 
 export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, onBack }: ZoneSeatMapProps) {
-  const { seats, setSeats, updateSeatStatus, selectedSeatIds, clearSelection, toggleSeatSelection } = useTicketStore();
+  const { seats, setSeats, updateSeatStatus, selectedSeats, clearSelection, toggleSeatSelection } = useTicketStore();
   const { user } = useAuthStore();
 
   const layout = useMemo(() => getZoneLayout(zoneId), [zoneId]);
@@ -300,16 +295,24 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
 
     socket.emit('join:concert', concertId);
 
-    // Carregar estat inicial real
-    socket.on('seat:initial_state', (seatStatuses: Record<string, string>) => {
-      Object.entries(seatStatuses).forEach(([seatId, status]) => {
-        updateSeatStatus(seatId, status as any);
+    // Carregar estat inicial real (ara estructurat per zona)
+    socket.on('seat:initial_state', (allSeatStatuses: Record<string, Record<string, string>>) => {
+      const zoneStatuses = allSeatStatuses[zoneId] || {};
+      Object.entries(zoneStatuses).forEach(([seatId, value]) => {
+        // value pot ser 'available' o el 'userId' de qui ho té
+        const seatStatus = (String(value) === String(user?.id)) ? 'mine' : 'reserved';
+        if (value && value !== 'available') {
+           updateSeatStatus(seatId, seatStatus as any, user?.id, value);
+        }
       });
     });
 
     // Escoltat actualitzacions individuals
-    const handleUpdate = ({ seatId, status }: { seatId: string, status: string }) => {
-      updateSeatStatus(seatId, status as any);
+    const handleUpdate = ({ zoneId: updateZoneId, seatId, status, userId: reservedByUserId }: { zoneId: string, seatId: string, status: string, userId?: string }) => {
+      // Només actualitzem si és la nostra zona
+      if (updateZoneId === zoneId) {
+        updateSeatStatus(seatId, status as any, user?.id, reservedByUserId);
+      }
     };
 
     socket.on('seat:update', handleUpdate);
@@ -334,6 +337,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
     // Intentar bloquejar al servidor
     socket.emit('seat:toggle', {
       concertId,
+      zoneId, // Enviem la zona per evitar collisions
       seatId: seat.id,
       userId: user?.id || 'anonymous'
     });
@@ -360,7 +364,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
   }, [layout.rows]);
 
   // Càlculs
-  const selectedSeatsInfo = seats.filter((s) => selectedSeatIds.includes(s.id));
+  const selectedSeatsInfo = selectedSeats;
   const totalPrice = selectedSeatsInfo.reduce((sum, seat) => sum + seat.price, 0);
   const pmrCount = selectedSeatsInfo.filter((s) => s.isPMR).length;
 
@@ -399,7 +403,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
           {zoneName}
         </h2>
         <p className="text-gray-500 text-[10px] mt-1 uppercase tracking-[0.2em] font-mono">{layout.sectionLabel}</p>
-        <p className="text-gray-400 text-sm mt-2">Selecciona les teves butaques — màxim 6</p>
+        <p className="text-gray-400 text-sm mt-2">Selecciona les teves butaques — màxim 5</p>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-8">
@@ -485,7 +489,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
           <div className="bg-surface p-5 md:p-6 rounded-2xl border border-cyan/20 shadow-[0_0_30px_rgba(0,240,255,0.05)] sticky top-24">
             <h3 className="text-lg font-bold mb-4 text-white border-b border-white/10 pb-3">Selecció Actual</h3>
 
-            {selectedSeatIds.length === 0 ? (
+            {selectedSeats.length === 0 ? (
               <div className="text-center py-8">
                 <svg className="w-10 h-10 mx-auto mb-3 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
@@ -526,7 +530,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
                   <div className="flex justify-between items-end">
                     <div>
                       <span className="text-gray-400 text-xs">Total</span>
-                      <span className="block text-[10px] text-gray-500">{selectedSeatIds.length} butaque{selectedSeatIds.length !== 1 ? "s" : ""}</span>
+                      <span className="block text-[10px] text-gray-500">{selectedSeats.length} butaque{selectedSeats.length !== 1 ? "s" : ""}</span>
                     </div>
                     <span className="text-2xl font-extrabold text-cyan">{totalPrice}€</span>
                   </div>
@@ -541,12 +545,12 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
               </>
             )}
 
-            {selectedSeatIds.length >= 6 && (
+            {selectedSeats.length >= 5 && (
               <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-900/20 border border-amber-500/20 rounded-lg">
                 <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
-                <p className="text-[10px] text-amber-300">Màxim 6 butaques per persona</p>
+                <p className="text-[10px] text-amber-300">Màxim 5 butaques per persona</p>
               </div>
             )}
           </div>
@@ -645,7 +649,7 @@ function StandingZoneView({
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">Màxim 6 entrades per persona</p>
+            <p className="text-xs text-gray-500 mt-2 text-center">Màxim 5 entrades per persona</p>
           </div>
 
           {/* Total */}
