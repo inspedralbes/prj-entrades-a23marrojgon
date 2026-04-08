@@ -43,11 +43,14 @@ export const useTicketStore = create<TicketStore>((set) => ({
   updateSeatStatus: (seatId, status) => set((state) => ({
     seats: state.seats.map(seat => 
       seat.id === seatId ? { ...seat, status } : seat
-    )
+    ),
+    // Si s'ha venut o reservat per algú altre, el traiem de la nostra selecció si hi era
+    selectedSeatIds: (status === 'sold' || status === 'reserved') 
+      ? state.selectedSeatIds.filter(id => id !== seatId)
+      : state.selectedSeatIds
   })),
 
   toggleSeatSelection: (seatToToggle) => set((state) => {
-    // Si ja el teníem seleccionat, el traiem
     const isAlreadySelected = state.selectedSeatIds.includes(seatToToggle.id);
     
     if (isAlreadySelected) {
@@ -56,14 +59,14 @@ export const useTicketStore = create<TicketStore>((set) => ({
       };
     }
     
-    // Si està disponible, l'afegim
+    // Si està disponible (o el servidor encara no ha dit el contrari), l'afegim
     if (seatToToggle.status === 'available') {
       return {
         selectedSeatIds: [...state.selectedSeatIds, seatToToggle.id]
       };
     }
     
-    return state; // No canvia res si el seient i.e. està sold o reserved
+    return state;
   }),
 
   clearSelection: () => set({ selectedSeatIds: [] }),

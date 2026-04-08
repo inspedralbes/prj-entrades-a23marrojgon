@@ -4,10 +4,11 @@ import { Seat as SeatType, useTicketStore } from '@/store/useTicketStore';
 
 interface SeatProps {
   seat: SeatType;
+  onClick?: () => void;
 }
 
-export default function Seat({ seat }: SeatProps) {
-  const { toggleSeatSelection, selectedSeatIds } = useTicketStore();
+export default function Seat({ seat, onClick }: SeatProps) {
+  const { selectedSeatIds } = useTicketStore();
   const isSelected = selectedSeatIds.includes(seat.id);
 
   // Espai buit de passadís
@@ -27,7 +28,7 @@ export default function Seat({ seat }: SeatProps) {
   const handleSeatClick = () => {
     if (seat.status === 'sold' || seat.status === 'reserved') return;
     if (selectedSeatIds.length >= 6 && !isSelected) return;
-    toggleSeatSelection(seat);
+    if (onClick) onClick();
   };
 
   // PMR seat (wheelchair accessible) - wider with icon

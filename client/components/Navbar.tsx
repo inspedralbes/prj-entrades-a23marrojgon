@@ -48,15 +48,17 @@ export default function Navbar() {
 
         {/* Lado derecho: Nav links + Usuario / Login */}
         <nav className="flex items-center gap-6">
-          <Link
-            href="/concerts"
-            className="text-sm font-medium text-foreground hover:text-cyan transition-colors flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-            </svg>
-            Concerts BCN
-          </Link>
+          {!pathname.startsWith('/admin') && (
+            <Link
+              href="/concerts"
+              className="text-sm font-medium text-foreground hover:text-cyan transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+              Concerts BCN
+            </Link>
+          )}
 
           {!isAuthenticated ? (
             <>
@@ -75,10 +77,12 @@ export default function Navbar() {
             </>
           ) : (
             <div className="flex items-center gap-4">
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-cyan/70 font-bold leading-none mb-1">Usuari Connectat</span>
-                <span className="text-sm font-medium text-foreground">{user?.name}</span>
-              </div>
+              {!pathname.startsWith('/admin') && (
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-cyan/70 font-bold leading-none mb-1">Usuari Connectat</span>
+                  <span className="text-sm font-medium text-foreground">{user?.name}</span>
+                </div>
+              )}
               <button 
                 onClick={handleLogout}
                 className="text-xs bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500/20 px-3 py-1.5 rounded transition-all uppercase tracking-widest font-bold"

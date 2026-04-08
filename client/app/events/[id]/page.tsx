@@ -127,6 +127,7 @@ export default function EventPage() {
       {/* ═══════════════════════════════════════════════════════════ */}
       {showSeatMap && selectedZone && isPalauSantJordi ? (
         <ZoneSeatMap
+          concertId={params.id}
           zoneId={selectedZone.id}
           zoneName={selectedZone.name}
           basePrice={selectedZone.price}

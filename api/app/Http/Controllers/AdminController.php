@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 use App\Models\User;
 use App\Models\Concert;
+use App\Models\Ticket;
 
 class AdminController extends Controller
 {
@@ -23,8 +24,8 @@ class AdminController extends Controller
     public function stats()
     {
         return response()->json([
-            'total_sales' => 125430.50, // Simulació
-            'tickets_sold' => 1240,     // Simulació
+            'total_sales' => (float) Ticket::where('status', 'confirmed')->sum('price'),
+            'tickets_sold' => 0, // Sol·licitat pel client (actualment 0 fins implementar selecció de seients)
             'users_count' => User::count(),
             'concerts_count' => Concert::count(),
         ]);

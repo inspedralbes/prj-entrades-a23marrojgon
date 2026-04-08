@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTicketStore, Seat as SeatType } from "@/store/useTicketStore";
 import Seat from "./Seat";
 import Link from "next/link";
+import { socket } from "@/lib/socket";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface ZoneSeatMapProps {
+  concertId: string;
   zoneId: string;
   zoneName: string;
   basePrice: number;
@@ -214,16 +217,11 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
     // PMR esquerra
     if (rowDef.pmrLeft) {
       for (let p = 0; p < rowDef.pmrLeft; p++) {
-        const rand = Math.random();
-        let status: "available" | "reserved" | "mine" | "sold" = "available";
-        if (rand > 0.92) status = "sold";
-        else if (rand > 0.84) status = "reserved";
-
         allSeats.push({
           id: `F${rowDef.label}-PMR${p + 1}`,
           row: rowDef.label,
           col: p + 1,
-          status,
+          status: 'available',
           price: basePrice,
           isPMR: true,
         });
@@ -233,16 +231,11 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
     // Costat esquerre (senars: 1, 3, 5, 7...)
     for (let i = 0; i < rowDef.seatsLeft; i++) {
       const seatNum = i * 2 + 1; // 1, 3, 5, 7...
-      const rand = Math.random();
-      let status: "available" | "reserved" | "mine" | "sold" = "available";
-      if (rand > 0.92) status = "sold";
-      else if (rand > 0.84) status = "reserved";
-
       allSeats.push({
         id: `F${rowDef.label}-${seatNum}`,
         row: rowDef.label,
         col: seatNum,
-        status,
+        status: 'available',
         price: basePrice,
       });
     }
@@ -262,16 +255,11 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
     // Costat dret (parells: 2, 4, 6, 8...)
     for (let i = 0; i < rowDef.seatsRight; i++) {
       const seatNum = i * 2 + 2; // 2, 4, 6, 8...
-      const rand = Math.random();
-      let status: "available" | "reserved" | "mine" | "sold" = "available";
-      if (rand > 0.92) status = "sold";
-      else if (rand > 0.84) status = "reserved";
-
       allSeats.push({
         id: `F${rowDef.label}-${seatNum}`,
         row: rowDef.label,
         col: seatNum,
-        status,
+        status: 'available',
         price: basePrice,
       });
     }
@@ -279,16 +267,11 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
     // PMR dreta
     if (rowDef.pmrRight) {
       for (let p = 0; p < rowDef.pmrRight; p++) {
-        const rand = Math.random();
-        let status: "available" | "reserved" | "mine" | "sold" = "available";
-        if (rand > 0.92) status = "sold";
-        else if (rand > 0.84) status = "reserved";
-
         allSeats.push({
           id: `F${rowDef.label}-PMR${(rowDef.pmrLeft || 0) + p + 1}`,
           row: rowDef.label,
           col: 100 + p,
-          status,
+          status: 'available',
           price: basePrice,
           isPMR: true,
         });
@@ -303,10 +286,39 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
 // COMPONENT PRINCIPAL
 // ═══════════════════════════════════════════════════════
 
-export default function ZoneSeatMap({ zoneId, zoneName, basePrice, onBack }: ZoneSeatMapProps) {
-  const { seats, setSeats, selectedSeatIds, clearSelection } = useTicketStore();
+export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, onBack }: ZoneSeatMapProps) {
+  const { seats, setSeats, updateSeatStatus, selectedSeatIds, clearSelection, toggleSeatSelection } = useTicketStore();
+  const { user } = useAuthStore();
 
   const layout = useMemo(() => getZoneLayout(zoneId), [zoneId]);
+
+  // Sincronització amb WebSockets
+  useEffect(() => {
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    socket.emit('join:concert', concertId);
+
+    // Carregar estat inicial real
+    socket.on('seat:initial_state', (seatStatuses: Record<string, string>) => {
+      Object.entries(seatStatuses).forEach(([seatId, status]) => {
+        updateSeatStatus(seatId, status as any);
+      });
+    });
+
+    // Escoltat actualitzacions individuals
+    const handleUpdate = ({ seatId, status }: { seatId: string, status: string }) => {
+      updateSeatStatus(seatId, status as any);
+    };
+
+    socket.on('seat:update', handleUpdate);
+
+    return () => {
+      socket.off('seat:initial_state');
+      socket.off('seat:update', handleUpdate);
+    };
+  }, [concertId, updateSeatStatus]);
 
   // Generar butaques quan canvia la zona
   useEffect(() => {
@@ -317,6 +329,18 @@ export default function ZoneSeatMap({ zoneId, zoneName, basePrice, onBack }: Zon
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoneId]);
+
+  const handleSeatClick = (seat: SeatType) => {
+    // Intentar bloquejar al servidor
+    socket.emit('seat:toggle', {
+      concertId,
+      seatId: seat.id,
+      userId: user?.id || 'anonymous'
+    });
+    
+    // Optimistic toggle local
+    toggleSeatSelection(seat);
+  };
 
   // Agrupar seients per files (mantenint ordre d'inserció)
   const seatsByRow = useMemo(() => {
@@ -417,7 +441,7 @@ export default function ZoneSeatMap({ zoneId, zoneName, basePrice, onBack }: Zon
 
                   <div className="flex gap-[2px] md:gap-[3px]">
                     {rowSeats.map((seat) => (
-                      <Seat key={seat.id} seat={seat} />
+                      <Seat key={seat.id} seat={seat} onClick={() => handleSeatClick(seat)} />
                     ))}
                   </div>
 
