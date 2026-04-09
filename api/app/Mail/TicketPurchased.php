@@ -12,11 +12,13 @@ class TicketPurchased extends Mailable
 
     public $tickets;
     public $userName;
+    public $concert;
 
-    public function __construct($tickets, $userName)
+    public function __construct($tickets, $userName, $concert = null)
     {
         $this->tickets = $tickets;
         $this->userName = $userName;
+        $this->concert = $concert;
     }
 
     public function build()

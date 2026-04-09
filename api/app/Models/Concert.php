@@ -21,4 +21,9 @@ class Concert extends Model
         'image_url',
         'status',
     ];
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
 }

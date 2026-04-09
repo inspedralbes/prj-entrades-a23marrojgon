@@ -8,7 +8,7 @@ interface SeatProps {
 }
 
 export default function Seat({ seat, onClick }: SeatProps) {
-  const { selectedSeats } = useTicketStore();
+  const { selectedSeats, purchasedCount } = useTicketStore();
   const isSelected = selectedSeats.some(s => s.id === seat.id);
 
   // Espai buit de passadís
@@ -16,18 +16,23 @@ export default function Seat({ seat, onClick }: SeatProps) {
     return <div className="w-6 h-8 md:w-7 md:h-9" aria-hidden="true" />;
   }
 
+  const isLimitReached = (selectedSeats.length + purchasedCount) >= 5;
+
   // Colors segons la semàntica indicada:
   const getColorClass = () => {
     if (isSelected || seat.status === 'mine') return 'bg-blue-500 border-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.8)]';
-    if (seat.status === 'available') return 'bg-emerald-500 border-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.8)] cursor-pointer';
-    if (seat.status === 'reserved') return 'bg-amber-500 border-amber-400 cursor-not-allowed opacity-80';
-    if (seat.status === 'sold') return 'bg-red-500 border-red-800 cursor-not-allowed opacity-50';
+    if (seat.status === 'available') {
+        if (isLimitReached && !isSelected) return 'bg-gray-700 border-gray-600 opacity-50 cursor-not-allowed';
+        return 'bg-green-500 border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.8)] cursor-pointer';
+    }
+    if (seat.status === 'reserved') return 'bg-yellow-500 border-yellow-400 cursor-not-allowed';
+    if (seat.status === 'sold') return 'bg-red-600 border-red-800 cursor-not-allowed shadow-[inset_0_0_10px_rgba(0,0,0,0.3)]';
     return 'bg-surface';
   };
 
   const handleSeatClick = () => {
     if (seat.status === 'sold' || seat.status === 'reserved') return;
-    if (selectedSeats.length >= 5 && !isSelected) return;
+    if (isLimitReached && !isSelected) return;
     if (onClick) onClick();
   };
 

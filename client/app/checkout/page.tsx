@@ -8,7 +8,7 @@ import { socket } from '@/lib/socket';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { selectedSeats, updateSeatStatus, clearSelection, setTimer } = useTicketStore();
+  const { selectedSeats, updateSeatStatus, clearSelection, setTimer, concertId } = useTicketStore();
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Detalls dels seients escullits (ara ja venen complets de l'Store)
@@ -27,7 +27,9 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const concertId = selectedSeats[0]?.id.split('-')[0] || 'Unknown'; // Aproximació de concert ID
+    
+    // Usem el concertId real guardat al store
+    const currentConcertId = concertId || (selectedSeats[0]?.id.split('-')[0]) || 'Unknown';
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkout`, {
@@ -37,13 +39,13 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${localStorage.getItem('tixflow_token')}`
         },
         body: JSON.stringify({
-          concert_id: concertId,
+          concert_id: currentConcertId,
           seats: selectedSeatsInfo.map(s => ({
             id: s.id,
             price: s.price,
             row: s.row,
             col: s.col,
-            zone: s.row // Simplificació per ara, s.zone si s'afegís al tipus
+            zone: s.zoneId
           })),
           email: formData.get('email'),
           name: formData.get('name')
@@ -62,8 +64,8 @@ export default function CheckoutPage() {
         updateSeatStatus(seat.id, 'sold');
         // Notificar al servidor de sockets que aquesta butaca s'ha venut
         socket.emit('seat:sold', { 
-            concertId, 
-            zoneId: seat.id.split('-')[1], // Extreure zona de l'ID si és possible o passar-la al store
+            concertId: currentConcertId, 
+            zoneId: seat.zoneId,
             seatId: seat.id 
         });
       });
@@ -117,11 +119,18 @@ export default function CheckoutPage() {
             </div>
 
 
-            <div className="mt-8 flex-1 flex flex-col justify-end">
+            <div className="mt-8 flex-1 flex flex-col md:flex-row gap-4 justify-end">
+              <button 
+                type="button"
+                onClick={() => router.back()}
+                className="w-full md:w-auto px-8 py-4 bg-white/5 text-white font-bold text-lg uppercase tracking-widest rounded border border-white/10 transition-all hover:bg-white/10"
+              >
+                Tornar
+              </button>
               <button 
                 type="submit"
                 disabled={isProcessing}
-                className="w-full py-4 bg-magenta text-white font-bold text-lg uppercase tracking-widest rounded transition-all hover:bg-magenta/90 hover:shadow-[0_0_25px_rgba(255,0,160,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+                className="flex-1 py-4 bg-magenta text-white font-bold text-lg uppercase tracking-widest rounded transition-all hover:bg-magenta/90 hover:shadow-[0_0_25px_rgba(255,0,160,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
               >
                 {isProcessing ? (
                   <>

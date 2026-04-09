@@ -205,7 +205,7 @@ function getZoneLayout(zoneId: string): ZoneLayout {
  * - Passadís central
  * - Costat dret: parells (2, 4, 6, 8...)
  */
-function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType[] {
+function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number, zoneId: string): SeatType[] {
   const allSeats: SeatType[] = [];
 
   rowDefs.forEach((rowDef) => {
@@ -216,6 +216,7 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
           id: `F${rowDef.label}-PMR${p + 1}`,
           row: rowDef.label,
           col: p + 1,
+          zoneId: zoneId,
           status: 'available',
           price: basePrice,
           isPMR: true,
@@ -230,6 +231,7 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
         id: `F${rowDef.label}-${seatNum}`,
         row: rowDef.label,
         col: seatNum,
+        zoneId: zoneId,
         status: 'available',
         price: basePrice,
       });
@@ -241,6 +243,7 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
         id: `F${rowDef.label}-aisle`,
         row: rowDef.label,
         col: 0,
+        zoneId: zoneId,
         status: "available",
         price: 0,
         isAisle: true,
@@ -254,6 +257,7 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
         id: `F${rowDef.label}-${seatNum}`,
         row: rowDef.label,
         col: seatNum,
+        zoneId: zoneId,
         status: 'available',
         price: basePrice,
       });
@@ -266,6 +270,7 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
           id: `F${rowDef.label}-PMR${(rowDef.pmrLeft || 0) + p + 1}`,
           row: rowDef.label,
           col: 100 + p,
+          zoneId: zoneId,
           status: 'available',
           price: basePrice,
           isPMR: true,
@@ -282,10 +287,56 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number): SeatType
 // ═══════════════════════════════════════════════════════
 
 export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, onBack }: ZoneSeatMapProps) {
-  const { seats, setSeats, updateSeatStatus, selectedSeats, clearSelection, toggleSeatSelection } = useTicketStore();
-  const { user } = useAuthStore();
+  const { 
+    seats, 
+    setSeats, 
+    updateSeatStatus, 
+    selectedSeats, 
+    clearSelection, 
+    toggleSeatSelection, 
+    setConcertId,
+    purchasedCount,
+    setPurchasedCount 
+  } = useTicketStore();
+  const { user, token } = useAuthStore();
 
   const layout = useMemo(() => getZoneLayout(zoneId), [zoneId]);
+
+  // Fixar concertId al store i carregar dades de l'usuari
+  // Sincronització inicial i alliberament al sortir
+  useEffect(() => {
+    if (concertId) {
+      setConcertId(concertId);
+      
+      // Carregar quantes entrades ja té l'usuari
+      if (user && token) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/concerts/${concertId}/user-count`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.count !== undefined) {
+             setPurchasedCount(data.count);
+          }
+        })
+        .catch(err => console.error("Error carregant comptador d'entrades:", err));
+      }
+    }
+
+    // Guard de navegació "clàssic" (tancar pestanya / refrescar)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (selectedSeats.length > 0) {
+        e.preventDefault();
+        e.returnValue = ''; // Mostra diàleg de confirmació del navegador
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [concertId, user, token, setConcertId, setPurchasedCount, selectedSeats.length]); // Eliminat clearSelection per permetre checkout
 
   // Sincronització amb WebSockets
   useEffect(() => {
@@ -299,10 +350,17 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
     socket.on('seat:initial_state', (allSeatStatuses: Record<string, Record<string, string>>) => {
       const zoneStatuses = allSeatStatuses[zoneId] || {};
       Object.entries(zoneStatuses).forEach(([seatId, value]) => {
-        // value pot ser 'available' o el 'userId' de qui ho té
-        const seatStatus = (String(value) === String(user?.id)) ? 'mine' : 'reserved';
-        if (value && value !== 'available') {
-           updateSeatStatus(seatId, seatStatus as any, user?.id, value);
+        // value pot ser 'available', 'sold' o el 'userId' de qui ho té
+        let seatStatus: 'available' | 'reserved' | 'mine' | 'sold' = 'available';
+        
+        if (value === 'sold') {
+          seatStatus = 'sold';
+        } else if (value && value !== 'available') {
+          seatStatus = (String(value) === String(user?.id)) ? 'mine' : 'reserved';
+        }
+
+        if (seatStatus !== 'available') {
+           updateSeatStatus(seatId, seatStatus, user?.id, String(value));
         }
       });
     });
@@ -321,12 +379,12 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
       socket.off('seat:initial_state');
       socket.off('seat:update', handleUpdate);
     };
-  }, [concertId, updateSeatStatus]);
+  }, [concertId, zoneId, user?.id, updateSeatStatus]);
 
   // Generar butaques quan canvia la zona
   useEffect(() => {
     if (!layout.isStanding) {
-      const generated = generateSeatsFromLayout(layout.rows, basePrice);
+      const generated = generateSeatsFromLayout(layout.rows, basePrice, zoneId);
       clearSelection();
       setSeats(generated);
     }
@@ -460,23 +518,23 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
           {/* Llegenda */}
           <div className="mt-6 pt-4 border-t border-white/5 flex flex-wrap justify-center gap-4 md:gap-5 text-[10px] md:text-xs text-gray-300">
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 bg-emerald-500 rounded-sm shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-              <span>Disponible</span>
+              <div className="w-3.5 h-3.5 bg-green-500 rounded-sm shadow-[0_0_6px_rgba(34,197,94,0.5)]" />
+              <span>Libre</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3.5 h-3.5 bg-blue-500 rounded-sm shadow-[0_0_6px_rgba(59,130,246,0.5)]" />
               <span>Seleccionat</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 bg-amber-500 rounded-sm shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
-              <span>Reservat</span>
+              <div className="w-3.5 h-3.5 bg-yellow-500 rounded-sm shadow-[0_0_6px_rgba(234,179,8,0.5)]" />
+              <span>Ocupat / Comprant</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3.5 h-3.5 bg-red-500 opacity-50 rounded-sm" />
+              <div className="w-3.5 h-3.5 bg-red-600 rounded-sm" />
               <span>Venut</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-5 h-3.5 bg-emerald-500 rounded border border-emerald-400 flex items-center justify-center">
+              <div className="w-5 h-3.5 bg-green-500 rounded border border-green-400 flex items-center justify-center">
                 <span className="text-[8px]">♿</span>
               </div>
               <span>PMR</span>
@@ -545,12 +603,29 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
               </>
             )}
 
-            {selectedSeats.length >= 5 && (
-              <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-900/20 border border-amber-500/20 rounded-lg">
-                <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <p className="text-[10px] text-amber-300">Màxim 5 butaques per persona</p>
+            {(selectedSeats.length + purchasedCount) >= 5 && (
+              <div className="mt-3 flex flex-col gap-2 p-3 bg-magenta/10 border border-magenta/30 rounded-lg animate-pulse shadow-[0_0_15px_rgba(255,0,160,0.1)]">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-magenta shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <p className="text-xs text-magenta font-black uppercase tracking-tighter">Límit assolit</p>
+                </div>
+                <p className="text-[10px] text-white/60 leading-tight">
+                  Has arribat al màxim de 5 entrades per concert. {purchasedCount > 0 ? `Ja en tens ${purchasedCount} de confirmades i n'has seleccionat ${selectedSeats.length}.` : "Has seleccionat el límit permès."}
+                </p>
+              </div>
+            )}
+
+            {purchasedCount > 0 && (selectedSeats.length + purchasedCount) < 5 && (
+              <div className="mt-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  <p className="text-[10px] text-green-400 font-bold uppercase tracking-wider">Entrades confirmades: {purchasedCount}</p>
+                </div>
+                <p className="text-[9px] text-white/40 italic">
+                  Pots afegir fins a {5 - purchasedCount - selectedSeats.length} entrada{5 - purchasedCount - selectedSeats.length !== 1 ? "s" : ""} més a la teva comanda.
+                </p>
               </div>
             )}
           </div>

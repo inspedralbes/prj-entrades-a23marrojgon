@@ -30,7 +30,12 @@ export default function AdminConcerts() {
         router.push('/');
         return;
       }
-      fetchConcerts();
+      // Primera càrrega i sincronització automàtica
+      const init = async () => {
+        await handleSync(); // Sincronitza amb Ticketmaster al entrar
+        await fetchConcerts();
+      };
+      init();
     }
   }, [isLoading, isAuthenticated, user, router]);
 
@@ -40,8 +45,16 @@ export default function AdminConcerts() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/concerts`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await response.json();
-      setConcerts(data);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setConcerts(Array.isArray(data) ? data : []);
+      } else {
+        if (response.status === 401) {
+            router.push('/'); // Redirigir si el token ha expirat o és invàlid
+        }
+        setConcerts([]);
+      }
     } catch (error) {
       console.error('Error fetching concerts:', error);
     } finally {
@@ -60,12 +73,9 @@ export default function AdminConcerts() {
           'Accept': 'application/json'
         }
       });
-      const data = await response.json();
-      alert(data.message);
-      fetchConcerts();
+      console.log('Sincronització automàtica completada');
     } catch (error) {
       console.error('Error syncing:', error);
-      alert('Error en la sincronització');
     } finally {
       setIsSyncing(false);
     }
@@ -121,7 +131,7 @@ export default function AdminConcerts() {
     setFormData({
       name: concert.name,
       description: concert.description || '',
-      date: concert.date.slice(0, 16), // Format for datetime-local
+      date: concert.date ? new Date(concert.date).toISOString().slice(0, 16) : '', // Format for datetime-local
       venue: concert.venue,
       price: concert.price.toString(),
       total_tickets: concert.total_tickets.toString(),
@@ -130,7 +140,14 @@ export default function AdminConcerts() {
     setShowModal(true);
   };
 
-  if (isFetching) return <div className="text-cyan animate-pulse font-black uppercase tracking-widest">Sincronitzant Base de Dades...</div>;
+  if (isFetching && concerts.length === 0) return (
+    <div className="min-h-[400px] flex items-center justify-center">
+        <div className="text-cyan animate-pulse font-black uppercase tracking-[0.3em] flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-4 border-cyan/20 border-t-cyan rounded-full animate-spin"></div>
+            Sincronitzant amb Ticketmaster...
+        </div>
+    </div>
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -140,17 +157,12 @@ export default function AdminConcerts() {
           <p className="text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Base de dades local activa</p>
         </div>
         <div className="flex gap-4">
-          <button 
-            onClick={handleSync}
-            disabled={isSyncing}
-            className={`px-6 py-2 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all ${
-              isSyncing 
-                ? 'bg-white/10 text-white/30 cursor-not-allowed' 
-                : 'bg-magenta/20 text-magenta border border-magenta/50 hover:bg-magenta hover:text-black shadow-[0_0_15px_rgba(255,0,255,0.2)]'
-            }`}
-          >
-            {isSyncing ? 'Sincronitzant...' : 'Sincronitzar Ticketmaster'}
-          </button>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-widest transition-all ${
+              isSyncing ? 'bg-cyan/10 text-cyan border-cyan/30' : 'bg-green-500/10 text-green-500 border-green-500/30'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-cyan animate-pulse' : 'bg-green-500'}`}></span>
+            {isSyncing ? 'Sincronitzant...' : 'Sincronitzat'}
+          </div>
           <button 
             onClick={() => { setEditingConcert(null); setShowModal(true); }}
             className="bg-cyan text-black px-6 py-2 rounded-lg font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-[0_0_15px_rgba(0,240,255,0.3)]"
@@ -167,6 +179,7 @@ export default function AdminConcerts() {
             <tr className="bg-white/5 border-b border-white/10">
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Imatge</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Concert</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Venut</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Recinte</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Data</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-right">Accions</th>
@@ -183,6 +196,11 @@ export default function AdminConcerts() {
                 <td className="px-6 py-4">
                   <div className="text-sm font-bold text-white">{concert.name}</div>
                   <div className="text-[10px] text-cyan font-mono">{concert.price} €</div>
+                </td>
+                <td className="px-6 py-4 text-center">
+                    <div className="inline-block px-3 py-1 rounded bg-magenta/10 border border-magenta/20">
+                        <span className="text-xs font-black text-magenta">{concert.tickets_count || 0}</span>
+                    </div>
                 </td>
                 <td className="px-6 py-4 text-xs text-white/60 font-bold uppercase">{concert.venue}</td>
                 <td className="px-6 py-4 text-[10px] text-white/40 font-mono">{new Date(concert.date).toLocaleString()}</td>

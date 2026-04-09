@@ -24,26 +24,40 @@ class CheckoutController extends Controller
         $seats = $request->input('seats');
         $concertId = $request->input('concert_id');
         
-        // Comprovar límit de 5 entrades TOTALS per usuari
-        $existingTicketsCount = Ticket::where('user_id', $user->id)->count();
-        if (($existingTicketsCount + count($seats)) > 5) {
+        $concert = Concert::where('tm_id', $concertId);
+        if (is_numeric($concertId)) {
+            $concert = $concert->orWhere('id', $concertId);
+        }
+        $concert = $concert->first();
+
+        if (!$concert) {
             return response()->json([
-                'message' => "Has assolit el límit d'entrades. Ja tens $existingTicketsCount entrades i n'estàs intentant comprar " . count($seats) . ". El màxim és 5."
-            ], 400);
+                'message' => "El concert seleccionat no existeix a la base de dades local. Si us plau, demana a l'administrador que sincronitzi la cartellera."
+            ], 404);
         }
 
-        $totalPrice = 0;
-
-        // Intentem trobar el concert (encara que sigui un ID de Ticketmaster, 
-        // podríem tenir-lo a la nostra DB o crear un placeholder).
-        // Per simplicitat, usarem el nom que ens enviï el front si no el tenim.
+        // Comprovar límit de 5 entrades per CONCERT per usuari
+        $existingTicketsCount = 0;
+        if ($concert) {
+            $existingTicketsCount = Ticket::where('user_id', $user->id)
+                ->where('concert_id', $concert->id)
+                ->where('status', 'confirmed')
+                ->count();
+        }
+            
+        if (($existingTicketsCount + count($seats)) > 5) {
+            return response()->json([
+                'message' => "Has assolit el límit d'entrades per aquest concert. Ja tens $existingTicketsCount entrades i n'estàs intentant comprar " . count($seats) . ". El màxim per concert és 5."
+            ], 400);
+        }
         
+        $totalPrice = 0;
         $ticketsCreated = [];
 
         foreach ($seats as $seat) {
             $ticket = Ticket::create([
                 'user_id' => $user->id,
-                'concert_id' => $concertId,
+                'concert_id' => $concert ? $concert->id : null,
                 'price' => $seat['price'],
                 'seat_info' => json_encode([
                     'id' => $seat['id'],
@@ -56,11 +70,23 @@ class CheckoutController extends Controller
             
             $ticketsCreated[] = $ticket;
             $totalPrice += $seat['price'];
+
+            // Notificar al servidor de sockets via Redis
+            try {
+                \Illuminate\Support\Facades\Redis::publish('ticket:sold', json_encode([
+                    'concertId' => $concertId,
+                    'zoneId' => $seat['zone'] ?? 'Unknown',
+                    'seatId' => $seat['id'],
+                    'status' => 'sold'
+                ]));
+            } catch (\Exception $e) {
+                Log::error("Error publicant a Redis: " . $e->getMessage());
+            }
         }
 
-        // Enviar Email amb QR
+        // Enviar Email amb QR i informació del concert
         try {
-            Mail::to($request->input('email'))->send(new TicketPurchased($ticketsCreated, $request->input('name')));
+            Mail::to($request->input('email'))->send(new TicketPurchased($ticketsCreated, $request->input('name'), $concert));
         } catch (\Exception $e) {
             Log::error("Error enviant email: " . $e->getMessage());
             // No fallem el checkout si falla l'email, però avisem al log

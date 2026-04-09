@@ -6,6 +6,7 @@ export interface Seat {
   id: string;
   row: string;
   col: number;
+  zoneId: string;
   status: SeatState;
   price: number;
   isPMR?: boolean;
@@ -29,6 +30,12 @@ interface TicketStore {
   // Accions per al temporitzador
   setTimer: (minutes: number, seconds: number) => void;
   decrementTimer: () => void;
+
+  // Concert actual
+  concertId: string | null;
+  purchasedCount: number;
+  setConcertId: (id: string) => void;
+  setPurchasedCount: (count: number) => void;
 }
 
 // Store principal creat amb Zustand
@@ -37,6 +44,8 @@ export const useTicketStore = create<TicketStore>((set) => ({
   selectedSeats: [],
   timerMinutes: 0,
   timerSeconds: 0,
+  concertId: null,
+  purchasedCount: 0,
 
   setSeats: (seats) => set({ seats }),
   
@@ -71,8 +80,8 @@ export const useTicketStore = create<TicketStore>((set) => ({
       };
     }
     
-    // Màxim 5 butaques
-    if (state.selectedSeats.length >= 5) {
+    // Màxim 5 butaques TOTALS (comprades + seleccionades)
+    if (state.selectedSeats.length + state.purchasedCount >= 5) {
       return state;
     }
     
@@ -98,5 +107,14 @@ export const useTicketStore = create<TicketStore>((set) => ({
       return { timerMinutes: state.timerMinutes - 1, timerSeconds: 59 };
     }
     return state;
-  })
+  }),
+
+  setConcertId: (id) => set((state) => {
+    // Si canviem de concert, reiniciem el comptador de comprades fins que es tornin a carregar
+    if (state.concertId !== id) {
+      return { concertId: id, purchasedCount: 0, selectedSeats: [] };
+    }
+    return { concertId: id };
+  }),
+  setPurchasedCount: (count) => set({ purchasedCount: count }),
 }));

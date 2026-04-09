@@ -25,7 +25,7 @@ class AdminController extends Controller
     {
         return response()->json([
             'total_sales' => (float) Ticket::where('status', 'confirmed')->sum('price'),
-            'tickets_sold' => 0, // Sol·licitat pel client (actualment 0 fins implementar selecció de seients)
+            'tickets_sold' => Ticket::where('status', 'confirmed')->count(),
             'users_count' => User::count(),
             'concerts_count' => Concert::count(),
         ]);
@@ -36,7 +36,9 @@ class AdminController extends Controller
      */
     public function users()
     {
-        return response()->json(User::orderBy('created_at', 'desc')->get());
+        return response()->json(User::withSum(['tickets' => function($query) {
+            $query->where('status', 'confirmed');
+        }], 'price')->orderBy('created_at', 'desc')->get());
     }
 
     /**
@@ -44,7 +46,9 @@ class AdminController extends Controller
      */
     public function concerts()
     {
-        return response()->json(Concert::orderBy('date', 'asc')->get());
+        return response()->json(Concert::withCount(['tickets' => function($query) {
+            $query->where('status', 'confirmed');
+        }])->orderBy('date', 'asc')->get());
     }
 
     public function syncTicketmaster()

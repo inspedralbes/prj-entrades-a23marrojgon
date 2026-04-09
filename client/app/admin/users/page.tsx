@@ -52,6 +52,7 @@ export default function AdminUsers() {
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Nom Complet</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Correu Electrònic</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Rol</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 text-center">Total Gasto</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Data Registre</th>
             </tr>
           </thead>
@@ -71,6 +72,13 @@ export default function AdminUsers() {
                     }`}>
                         {u.role}
                     </span>
+                </td>
+                <td className="px-6 py-4 text-center">
+                    <div className="inline-block px-3 py-1 rounded bg-yellow-500/10 border border-yellow-500/20">
+                        <span className="text-xs font-black text-yellow-500">
+                          {Number(u.tickets_sum_price || 0).toFixed(2)}€
+                        </span>
+                    </div>
                 </td>
                 <td className="px-6 py-4 text-[10px] text-white/40 font-mono tracking-tighter">
                     {new Date(u.created_at).toLocaleDateString('ca-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

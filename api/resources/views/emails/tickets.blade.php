@@ -2,184 +2,257 @@
 <html lang="ca">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             background-color: #020617;
             color: #ffffff;
             font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
         }
-        .container {
-            max-width: 600px;
+        .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #020617;
+            padding-bottom: 60px;
+        }
+        .main {
+            background-color: transparent;
             margin: 0 auto;
+            width: 100%;
+            max-width: 600px;
+            border-spacing: 0;
+            color: #ffffff;
         }
         .header {
+            padding: 40px 0 20px 0;
             text-align: center;
-            padding: 20px 0;
         }
         .logo {
-            font-size: 32px;
+            font-size: 42px;
             font-weight: 900;
             color: #00f0ff;
-            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-            letter-spacing: 2px;
-        }
-        
-        /* Disseny del Ticket */
-        .ticket-card {
-            background-color: #0f172a;
-            border: 2px solid #00f0ff;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
-        }
-        
-        /* Efecte "perforat" lateral */
-        .ticket-card::before, .ticket-card::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            width: 30px;
-            height: 30px;
-            background-color: #020617;
-            border-radius: 50%;
-            transform: translateY(-50%);
-            z-index: 10;
-        }
-        .ticket-card::before { left: -15px; border-right: 2px solid #00f0ff; }
-        .ticket-card::after { right: -15px; border-left: 2px solid #00f0ff; }
-
-        .ticket-header {
-            background: linear-gradient(90deg, #00f0ff 0%, #ff00a0 100%);
-            padding: 15px;
-            text-align: center;
-            font-weight: bold;
-            color: #000;
+            text-decoration: none;
+            letter-spacing: 4px;
             text-transform: uppercase;
-            letter-spacing: 3px;
+            font-style: italic;
         }
-
-        .ticket-body {
+        
+        /* Disseny del Ticket Premium */
+        .ticket-container {
+            padding: 20px;
+        }
+        .ticket {
+            background-color: #0f172a;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 20px 50px rgba(0, 240, 255, 0.1);
+            margin-bottom: 40px;
+        }
+        .ticket-hero {
+            position: relative;
+            height: 250px;
+            background-size: cover;
+            background-position: center;
+        }
+        .ticket-hero-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent 0%, rgba(15, 23, 42, 1) 100%);
+        }
+        .ticket-content {
             padding: 30px;
-            display: table;
-            width: 100%;
-            box-sizing: border-box;
+            text-align: left;
         }
-
-        .ticket-info {
-            display: table-cell;
-            vertical-align: top;
-            width: 60%;
-        }
-
-        .ticket-qr-container {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: center;
-            width: 40%;
-            padding-left: 20px;
-        }
-
         .concert-name {
-            font-size: 24px;
+            font-size: 32px;
+            font-weight: 900;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+        .venue-name {
+            color: #00f0ff;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+        
+        .divider {
+            height: 1px;
+            background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0, rgba(255, 255, 255, 0.1) 5px, transparent 5px, transparent 10px);
+            margin: 25px 0;
+        }
+
+        .info-grid {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .info-label {
+            color: #94a3b8;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 18px;
             font-weight: 800;
             color: #fff;
-            margin-bottom: 15px;
-            line-height: 1.2;
         }
 
-        .label {
-            color: #94a3b8;
-            font-size: 12px;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-
-        .value {
-            color: #00f0ff;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-
-        .qr-code {
-            background-color: #fff;
-            padding: 10px;
-            border-radius: 12px;
-            width: 180px;
-            height: 180px;
-            display: block;
-            margin: 0 auto;
-        }
-
-        .footer-msg {
+        .qr-section {
+            background-color: #1e293b;
+            padding: 40px 30px;
             text-align: center;
-            color: #64748b;
+            border-top: 2px dashed rgba(255, 255, 255, 0.05);
+        }
+        .qr-outer {
+            display: inline-block;
+            background: linear-gradient(135deg, #00f0ff 0%, #ff00a0 100%);
+            padding: 4px;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+        }
+        .qr-inner {
+            background: #fff;
+            padding: 15px;
+            border-radius: 17px;
+        }
+        .qr-image {
+            display: block;
+            width: 160px;
+            height: 160px;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 0 40px;
+        }
+        .footer p {
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .button {
+            display: inline-block;
+            background-color: #00f0ff;
+            color: #020617;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 900;
+            text-transform: uppercase;
             font-size: 14px;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            letter-spacing: 1px;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">TIXFLOW</div>
-        </div>
-
-        <div style="margin-bottom: 40px;">
-            <h1 style="font-size: 24px;">Hola, {{ $userName }}!</h1>
-            <p style="color: #94a3b8;">La teva compra s'ha realitzat amb èxit. Aquí tens les teves entrades digitals per al festival.</p>
-        </div>
-        
-        @foreach($tickets as $ticket)
-            @php
-                $info = json_decode($ticket->seat_info);
-                // Usant una API de QR més moderna i nítida
-                $qrData = "TICKET:" . $ticket->id . "|CONCERT:" . $ticket->concert_id;
-                $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($qrData) . "&bgcolor=ffffff&color=000000&margin=1";
-            @endphp
-            
-            <div class="ticket-card">
-                <div class="ticket-header">ENTRADA OFICIAL</div>
-                <div class="ticket-body">
-                    <div class="ticket-info">
-                        <div class="concert-name">NEON CITY FESTIVAL</div>
-                        
-                        <div class="label">CODI DE TICKET</div>
-                        <div class="value">#{{ str_pad($ticket->id, 6, '0', STR_PAD_LEFT) }}</div>
-
-                        <div style="display: table; width: 100%;">
-                            <div style="display: table-cell; width: 50%;">
-                                <div class="label">ZONA</div>
-                                <div class="value" style="color: #ff00a0;">{{ $info->zone }}</div>
+    <div class="wrapper">
+        <center>
+            <table class="main" width="100%">
+                <tr>
+                    <td class="header">
+                        <div class="logo">TIXFLOW</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center" style="padding: 0 30px 40px 30px;">
+                        <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">PREPARA'T, {{ strtoupper($userName) }}!</h1>
+                        <p style="color: #94a3b8; font-size: 16px;">La teva missió ha estat confirmada. Ens veiem a l'escenari.</p>
+                    </td>
+                </tr>
+                
+                @foreach($tickets as $ticket)
+                    @php
+                        $info = json_decode($ticket->seat_info);
+                        $qrData = "TICKET:" . $ticket->id . "|CONCERT:" . $ticket->concert_id;
+                        $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($qrData) . "&bgcolor=ffffff&color=000000&margin=1";
+                        $concertImage = $concert && $concert->image_url ? $concert->image_url : 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000&auto=format&fit=crop';
+                    @endphp
+                    <tr>
+                        <td class="ticket-container">
+                            <div class="ticket">
+                                <div class="ticket-hero" style="background-image: url('{{ $concertImage }}');">
+                                    <div class="ticket-hero-overlay"></div>
+                                    <div style="position: absolute; top: 20px; right: 20px; background: rgba(0, 240, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(0, 240, 255, 0.3); color: #00f0ff; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; letter-spacing: 1px;">
+                                        ACCESS CONFIRMED
+                                    </div>
+                                </div>
+                                <div class="ticket-content">
+                                    <div class="concert-name">{{ $concert ? $concert->name : 'NEON EXPERIENCE' }}</div>
+                                    <div class="venue-name">{{ $concert ? $concert->venue : 'UNKNOWN SECTOR' }}</div>
+                                    
+                                    <div class="divider"></div>
+                                    
+                                    <table width="100%">
+                                        <tr>
+                                            <td width="33%">
+                                                <div class="info-label">DATA</div>
+                                                <div class="info-value">{{ $concert ? date('d.m.Y', strtotime($concert->date)) : 'TBD' }}</div>
+                                            </td>
+                                            <td width="33%">
+                                                <div class="info-label">HORA</div>
+                                                <div class="info-value">{{ $concert ? date('H:i', strtotime($concert->date)) : '21:00' }}h</div>
+                                            </td>
+                                            <td width="33%">
+                                                <div class="info-label">TICKET ID</div>
+                                                <div class="info-value">#{{ str_pad($ticket->id, 5, '0', STR_PAD_LEFT) }}</div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <div style="margin-top: 30px;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td width="50%">
+                                                    <div class="info-label">SECTOR / ZONA</div>
+                                                    <div class="info-value" style="color: #ff00a0;">{{ strtoupper($info->zone) }}</div>
+                                                </td>
+                                                <td width="50%">
+                                                    <div class="info-label"> FILA / BUTACA</div>
+                                                    <div class="info-value">{{ $info->row }} / {{ $info->col }}</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <div class="qr-section">
+                                    <div class="qr-outer">
+                                        <div class="qr-inner">
+                                            <img src="{{ $qrUrl }}" class="qr-image" alt="QR Access Code">
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 20px; color: #94a3b8; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">
+                                        Presenta aquest codi a l'entrada
+                                    </div>
+                                </div>
                             </div>
-                            <div style="display: table-cell; width: 50%;">
-                                <div class="label">FILA / SEIENT</div>
-                                <div class="value">{{ $info->row }} - {{ $info->col }}</div>
-                            </div>
-                        </div>
-
-                        <div class="label">RECINTE</div>
-                        <div class="value">PALAU SANT JORDI</div>
-                    </div>
-                    
-                    <div class="ticket-qr-container">
-                        <img src="{{ $qrUrl }}" class="qr-code" alt="Codi QR d'accés">
-                        <div style="margin-top: 10px; font-size: 10px; color: #94a3b8;">ESCANEJA PER ENTRAR</div>
-                    </div>
-                </div>
-            </div>
-        @endforeach
-
-        <div class="footer-msg">
-            <p>Pots presentar aquestes entrades directament des del teu mòbil al control d'accés.</p>
-            <p>&copy; 2026 TixFlow Barcelona. Cyber Experience Ticketing.</p>
-        </div>
+                        </td>
+                    </tr>
+                @endforeach
+                
+                <tr>
+                    <td class="footer">
+                        <p>Aquesta és una entrada digital oficial. Si us plau, descarrega-la al teu dispositiu o imprimeix-la per garantir un accés ràpid al recinte.</p>
+                        <p>&copy; 2026 TIXFLOW. Tecnologia desenvolupada per la digitalització total d'esdeveniments.</p>
+                    </td>
+                </tr>
+            </table>
+        </center>
     </div>
 </body>
 </html>

@@ -7,11 +7,13 @@ import { useConcertStore } from "@/store/useConcertStore";
 import VenueMapRouter from "@/components/VenueMapRouter";
 import ZoneSeatMap from "@/components/ZoneSeatMap";
 import { MapZone } from "@/types/map";
+import { useTicketStore } from "@/store/useTicketStore";
 
 export default function EventPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { events, setEvents, setConnected, setError, setLastUpdated } = useConcertStore();
+  const { clearSelection, selectedSeats } = useTicketStore();
 
   const [selectedZone, setSelectedZone] = useState<MapZone | null>(null);
   const [tickets, setTickets] = useState<number>(1);
@@ -72,14 +74,24 @@ export default function EventPage() {
   // Handler per canviar de zona (reseteja seat map)
   const handleZoneSelect = (zone: MapZone | null) => {
     setSelectedZone(zone);
-    setShowSeatMap(false);
+    if (zone && isPalauSantJordi) {
+      setShowSeatMap(true);
+    } else {
+      setShowSeatMap(false);
+    }
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Botó Tornar */}
       <button
-        onClick={() => router.push("/")}
+        onClick={() => {
+          if (selectedSeats.length > 0) {
+            socket.emit('seat:release_all', { concertId: params.id });
+            clearSelection();
+          }
+          router.push("/");
+        }}
         className="flex items-center gap-2 text-cyan mb-8 hover:text-white transition-colors group"
       >
         <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
