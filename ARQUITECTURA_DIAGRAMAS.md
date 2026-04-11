@@ -1,7 +1,6 @@
 # 🏗️ ARQUITECTURA & DIAGRAMAS - PROYECTO ENTRADAS
 
 ## 1. ARQUITECTURA GENERAL
-
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        CLIENTE FINAL (Navegador)                    │
