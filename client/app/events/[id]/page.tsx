@@ -51,7 +51,7 @@ export default function EventPage() {
   }, [params.id, user, token]);
 
   // Detectar si és un recinte amb selecció de butaques o zones interactives
-  const venueLower = (event.venueGroup || event.venue || "").toLowerCase();
+  const venueLower = (event?.venueGroup || event?.venue || "").toLowerCase();
   const isInteractiveVenue =
     venueLower.includes("palau sant jordi") ||
     venueLower.includes("sant jordi club") ||
@@ -243,8 +243,8 @@ export default function EventPage() {
                           onClick={() => setShowSeatMap(true)}
                           disabled={hasMaxTickets}
                           className={`w-full mt-2 font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all active:scale-95 flex items-center justify-center gap-3 ${hasMaxTickets
-                              ? 'bg-red-900/50 text-red-300 cursor-not-allowed border border-red-500/30 hover:shadow-none'
-                              : 'bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] hover:-translate-y-1'
+                            ? 'bg-red-900/50 text-red-300 cursor-not-allowed border border-red-500/30 hover:shadow-none'
+                            : 'bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] hover:-translate-y-1'
                             }`}
                         >
                           {isStanding ? (
@@ -312,8 +312,8 @@ export default function EventPage() {
                       <button
                         disabled={purchasedCount >= 5}
                         className={`w-full mt-2 font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all active:scale-95 flex items-center justify-center gap-2 ${purchasedCount >= 5
-                            ? 'bg-red-900/50 text-red-300 cursor-not-allowed border border-red-500/30 hover:shadow-none'
-                            : 'bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] hover:-translate-y-1'
+                          ? 'bg-red-900/50 text-red-300 cursor-not-allowed border border-red-500/30 hover:shadow-none'
+                          : 'bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] hover:-translate-y-1'
                           }`}
                       >
                         Continuar al Pagament
