@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTicketStore, Seat as SeatType } from "@/store/useTicketStore";
 import Seat from "./Seat";
 import Link from "next/link";
@@ -52,148 +53,116 @@ interface ZoneLayout {
  * Grada Superior: Sectors ~201-212, Files 1-10, 6-14 seients per costat
  */
 function getZoneLayout(zoneId: string): ZoneLayout {
-  switch (zoneId) {
+  // ─── PALAU SANT JORDI (DINÀMIC) ───
+  if (zoneId.startsWith("palau-")) {
+    const sectorNum = parseInt(zoneId.split("-")[1]);
+    const isUpper = sectorNum >= 200;
 
-    // ─── PISTA / FRONT STAGE (Interactivitzat) ───────
+    // Sectors de fons (més amples, menys profunds)
+    const isFons = (sectorNum >= 105 && sectorNum <= 109) || (sectorNum >= 205 && sectorNum <= 209);
+    // Sectors laterals (més profunds, menys amples)
+    const isLateral = !isFons;
+
+    let rowsCount = isUpper ? 8 : 12;
+    let seatsPerRow = isUpper ? 6 : 10;
+
+    if (isFons) {
+      rowsCount = isUpper ? 6 : 9;
+      seatsPerRow = isUpper ? 10 : 15;
+    } else if (isLateral) {
+      rowsCount = isUpper ? 10 : 16;
+      seatsPerRow = isUpper ? 5 : 8;
+    }
+
+    return {
+      sectionLabel: `PALAU SANT JORDI · SECTOR ${sectorNum}`,
+      isStanding: false,
+      rows: Array.from({ length: rowsCount }, (_, i) => ({
+        label: (i + 1).toString(),
+        seatsLeft: seatsPerRow,
+        seatsRight: seatsPerRow,
+        indent: Math.max(0, Math.floor(rowsCount / 2) - i)
+      })),
+    };
+  }
+
+  // ─── SANT JORDI CLUB (DINÀMIC) ───
+  if (zoneId.startsWith("sj-")) {
+    return {
+      sectionLabel: `SANT JORDI CLUB · ${zoneId.replace('sj-', '').toUpperCase()}`,
+      isStanding: zoneId === 'pista-general',
+      rows: Array.from({ length: 10 }, (_, i) => ({
+        label: (i + 1).toString(),
+        seatsLeft: 12,
+        seatsRight: 12,
+        indent: 0
+      })),
+    };
+  }
+
+  // ─── RAZZMATAZZ (DINÀMIC) ───
+  if (zoneId.startsWith("razz-")) {
+    return {
+      sectionLabel: `RAZZMATAZZ · ${zoneId.replace('razz-', '').toUpperCase()}`,
+      isStanding: zoneId === 'pista-general',
+      rows: Array.from({ length: 8 }, (_, i) => ({
+        label: (i + 1).toString(),
+        seatsLeft: 10,
+        seatsRight: 10,
+        indent: 0
+      })),
+    };
+  }
+
+  switch (zoneId) {
+    // ─── PISTA / FRONT STAGE ───────
     case "front-stage":
       return {
         sectionLabel: "FRONT STAGE · Proximitat Escenari",
-        isStanding: false,
-        rows: Array.from({ length: 15 }, (_, i) => ({
-          label: `FS${i + 1}`,
-          seatsLeft: 12,
-          seatsRight: 12,
-          indent: 0
-        })),
+        isStanding: true,
+        rows: [],
       };
 
     case "pista-general":
       return {
-        sectionLabel: "PISTA GENERAL · Asseients Numerats",
+        sectionLabel: "PISTA GENERAL · Entrada General",
+        isStanding: true,
+        rows: [],
+      };
+
+    // ─── LLEGAT / COMPATIBILITAT ────
+    case "grada-inf-esquerra":
+    case "grada-inf-dreta":
+    case "grada-inf-fons":
+      return {
+        sectionLabel: "GRADA INFERIOR · Zona General",
         isStanding: false,
-        rows: Array.from({ length: 25 }, (_, i) => ({
-          label: `P${i + 1}`,
-          seatsLeft: 15,
-          seatsRight: 15,
-          indent: 0
+        rows: Array.from({ length: 15 }, (_, i) => ({
+          label: (i + 1).toString(),
+          seatsLeft: 10,
+          seatsRight: 10,
+          indent: Math.max(0, 10 - i)
         })),
       };
 
-    // ─── GRADA INFERIOR ESQUERRA (Sectors 109-111) ────
-    case "grada-inf-esquerra":
-      return {
-        sectionLabel: "GRADA INFERIOR ESQUERRA · Sectors 109-111",
-        isStanding: false,
-        rows: [
-          ...Array.from({ length: 18 }, (_, i) => ({
-            label: (i + 1).toString(),
-            seatsLeft: 8 + Math.floor(i / 2),
-            seatsRight: 8 + Math.floor(i / 2),
-            indent: Math.max(0, 10 - i)
-          })),
-          { label: "WC", seatsLeft: 0,  seatsRight: 0,  indent: 0, pmrLeft: 4, pmrRight: 4 },
-        ],
-      };
-
-    // ─── GRADA INFERIOR DRETA (Sectors 101-103) ───────
-    case "grada-inf-dreta":
-      return {
-        sectionLabel: "GRADA INFERIOR DRETA · Sectors 101-103",
-        isStanding: false,
-        rows: [
-          { label: "1",  seatsLeft: 6,  seatsRight: 6,  indent: 5 },
-          { label: "2",  seatsLeft: 7,  seatsRight: 7,  indent: 4 },
-          { label: "3",  seatsLeft: 8,  seatsRight: 7,  indent: 4 },
-          { label: "4",  seatsLeft: 8,  seatsRight: 8,  indent: 3 },
-          { label: "5",  seatsLeft: 9,  seatsRight: 8,  indent: 3 },
-          { label: "6",  seatsLeft: 9,  seatsRight: 9,  indent: 2 },
-          { label: "7",  seatsLeft: 10, seatsRight: 9,  indent: 2 },
-          { label: "8",  seatsLeft: 10, seatsRight: 10, indent: 1 },
-          { label: "9",  seatsLeft: 10, seatsRight: 10, indent: 1 },
-          { label: "10", seatsLeft: 11, seatsRight: 10, indent: 0 },
-          { label: "11", seatsLeft: 11, seatsRight: 11, indent: 0 },
-          { label: "12", seatsLeft: 11, seatsRight: 11, indent: 0 },
-          { label: "WC", seatsLeft: 0,  seatsRight: 0,  indent: 0, pmrLeft: 3, pmrRight: 3 },
-        ],
-      };
-
-    // ─── GRADA INFERIOR FONS (Sectors 104-108) ────────
-    case "grada-inf-fons":
-      return {
-        sectionLabel: "GRADA INFERIOR FONS · Sectors 104-108",
-        isStanding: false,
-        rows: [
-          ...Array.from({ length: 25 }, (_, i) => ({
-            label: (i + 1).toString(),
-            seatsLeft: 10 + Math.floor(i / 2),
-            seatsRight: 10 + Math.floor(i / 2),
-            indent: Math.max(0, 5 - Math.floor(i / 3))
-          })),
-          { label: "WC", seatsLeft: 0,  seatsRight: 0,  indent: 0, pmrLeft: 4, pmrRight: 4 },
-        ],
-      };
-
-    // ─── GRADA SUPERIOR ESQUERRA (Sectors 209-211) ────
     case "grada-sup-esquerra":
-      return {
-        sectionLabel: "GRADA SUPERIOR ESQUERRA · Sectors 209-211",
-        isStanding: false,
-        rows: [
-          { label: "1",  seatsLeft: 5,  seatsRight: 5,  indent: 4 },
-          { label: "2",  seatsLeft: 5,  seatsRight: 6,  indent: 3 },
-          { label: "3",  seatsLeft: 6,  seatsRight: 6,  indent: 3 },
-          { label: "4",  seatsLeft: 6,  seatsRight: 7,  indent: 2 },
-          { label: "5",  seatsLeft: 7,  seatsRight: 7,  indent: 2 },
-          { label: "6",  seatsLeft: 7,  seatsRight: 7,  indent: 1 },
-          { label: "7",  seatsLeft: 7,  seatsRight: 8,  indent: 1 },
-          { label: "8",  seatsLeft: 8,  seatsRight: 8,  indent: 0 },
-          { label: "9",  seatsLeft: 8,  seatsRight: 8,  indent: 0 },
-          { label: "10", seatsLeft: 8,  seatsRight: 8,  indent: 0 },
-        ],
-      };
-
-    // ─── GRADA SUPERIOR DRETA (Sectors 201-203) ───────
     case "grada-sup-dreta":
-      return {
-        sectionLabel: "GRADA SUPERIOR DRETA · Sectors 201-203",
-        isStanding: false,
-        rows: [
-          { label: "1",  seatsLeft: 5,  seatsRight: 5,  indent: 4 },
-          { label: "2",  seatsLeft: 6,  seatsRight: 5,  indent: 3 },
-          { label: "3",  seatsLeft: 6,  seatsRight: 6,  indent: 3 },
-          { label: "4",  seatsLeft: 7,  seatsRight: 6,  indent: 2 },
-          { label: "5",  seatsLeft: 7,  seatsRight: 7,  indent: 2 },
-          { label: "6",  seatsLeft: 7,  seatsRight: 7,  indent: 1 },
-          { label: "7",  seatsLeft: 8,  seatsRight: 7,  indent: 1 },
-          { label: "8",  seatsLeft: 8,  seatsRight: 8,  indent: 0 },
-          { label: "9",  seatsLeft: 8,  seatsRight: 8,  indent: 0 },
-          { label: "10", seatsLeft: 8,  seatsRight: 8,  indent: 0 },
-        ],
-      };
-
-    // ─── GRADA SUPERIOR FONS (Sectors 204-208) ────────
     case "grada-sup-fons":
       return {
-        sectionLabel: "GRADA SUPERIOR FONS · Sectors 204-208",
+        sectionLabel: "GRADA SUPERIOR · Zona General",
         isStanding: false,
-        rows: [
-          { label: "1",  seatsLeft: 8,  seatsRight: 8,  indent: 5 },
-          { label: "2",  seatsLeft: 9,  seatsRight: 9,  indent: 4 },
-          { label: "3",  seatsLeft: 9,  seatsRight: 10, indent: 4 },
-          { label: "4",  seatsLeft: 10, seatsRight: 10, indent: 3 },
-          { label: "5",  seatsLeft: 11, seatsRight: 11, indent: 2 },
-          { label: "6",  seatsLeft: 11, seatsRight: 11, indent: 2 },
-          { label: "7",  seatsLeft: 12, seatsRight: 12, indent: 1 },
-          { label: "8",  seatsLeft: 12, seatsRight: 12, indent: 1 },
-          { label: "9",  seatsLeft: 12, seatsRight: 13, indent: 0 },
-          { label: "10", seatsLeft: 13, seatsRight: 13, indent: 0 },
-        ],
+        rows: Array.from({ length: 10 }, (_, i) => ({
+          label: (i + 1).toString(),
+          seatsLeft: 8,
+          seatsRight: 8,
+          indent: Math.max(0, 5 - i)
+        })),
       };
 
     default:
       return {
         sectionLabel: "Zona",
-        isStanding: true,
+        isStanding: zoneId.includes("pista") || zoneId.includes("standing"),
         rows: [],
       };
   }
@@ -287,16 +256,19 @@ function generateSeatsFromLayout(rowDefs: RowDef[], basePrice: number, zoneId: s
 // ═══════════════════════════════════════════════════════
 
 export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, onBack }: ZoneSeatMapProps) {
-  const { 
-    seats, 
-    setSeats, 
-    updateSeatStatus, 
-    selectedSeats, 
-    clearSelection, 
-    toggleSeatSelection, 
+  const router = useRouter();
+  const {
+    seats,
+    setSeats,
+    updateSeatStatus,
+    selectedSeats,
+    clearSelection,
+    toggleSeatSelection,
     setConcertId,
     purchasedCount,
-    setPurchasedCount 
+    setPurchasedCount,
+    isProceedingToCheckout,
+    setProceedingToCheckout
   } = useTicketStore();
   const { user, token } = useAuthStore();
 
@@ -307,36 +279,31 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
   useEffect(() => {
     if (concertId) {
       setConcertId(concertId);
-      
+      // Resetegem el flag de checkout al entrar a una zona
+      setProceedingToCheckout(false);
+
       // Carregar quantes entrades ja té l'usuari
+
       if (user && token) {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/concerts/${concertId}/user-count`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(res => res.json())
-        .then(data => {
-          if (data.count !== undefined) {
-             setPurchasedCount(data.count);
-          }
-        })
-        .catch(err => console.error("Error carregant comptador d'entrades:", err));
+          .then(res => res.json())
+          .then(data => {
+            if (data.count !== undefined) {
+              setPurchasedCount(data.count);
+            }
+          })
+          .catch(err => console.error("Error carregant comptador d'entrades:", err));
       }
     }
 
-    // Guard de navegació "clàssic" (tancar pestanya / refrescar)
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (selectedSeats.length > 0) {
-        e.preventDefault();
-        e.returnValue = ''; // Mostra diàleg de confirmació del navegador
-      }
-    };
+    // Gestió de navegació ja realitzada pel Navbar (global)
+    // S'evita neteja aquí per permetre el pas a /checkout
+    return () => { };
+  }, [concertId, user, token, setConcertId, setPurchasedCount]);
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
 
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [concertId, user, token, setConcertId, setPurchasedCount, selectedSeats.length]); // Eliminat clearSelection per permetre checkout
 
   // Sincronització amb WebSockets
   useEffect(() => {
@@ -352,7 +319,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
       Object.entries(zoneStatuses).forEach(([seatId, value]) => {
         // value pot ser 'available', 'sold' o el 'userId' de qui ho té
         let seatStatus: 'available' | 'reserved' | 'mine' | 'sold' = 'available';
-        
+
         if (value === 'sold') {
           seatStatus = 'sold';
         } else if (value && value !== 'available') {
@@ -360,7 +327,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
         }
 
         if (seatStatus !== 'available') {
-           updateSeatStatus(seatId, seatStatus, user?.id, String(value));
+          updateSeatStatus(seatId, seatStatus, user?.id, String(value));
         }
       });
     });
@@ -399,7 +366,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
       seatId: seat.id,
       userId: user?.id || 'anonymous'
     });
-    
+
     // Optimistic toggle local
     toggleSeatSelection(seat);
   };
@@ -437,6 +404,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
         sectionLabel={layout.sectionLabel}
         basePrice={basePrice}
         onBack={onBack}
+        router={router}
       />
     );
   }
@@ -448,13 +416,23 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button onClick={onBack} className="flex items-center gap-2 text-cyan hover:text-white transition-colors group text-sm">
+        <button
+          onClick={() => {
+            if (selectedSeats.length > 0) {
+              socket.emit('seat:release_all', { concertId });
+              clearSelection();
+            }
+            onBack();
+          }}
+          className="flex items-center gap-2 text-cyan hover:text-white transition-colors group text-sm"
+        >
           <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           <span>Tornar al mapa de zones</span>
         </button>
       </div>
+
 
       <div className="text-center">
         <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan to-white">
@@ -466,8 +444,8 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
 
       <div className="flex flex-col xl:flex-row gap-8">
         {/* MAPA DE BUTAQUES */}
-        <div className="flex-1 bg-surface p-3 md:p-6 rounded-2xl border border-cyan/20 shadow-[0_0_30px_rgba(0,240,255,0.05)] overflow-hidden">
-          
+        <div className="flex-1 bg-surface p-3 md:p-6 rounded-2xl border border-cyan/20 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
+
           {/* Escenari */}
           <div className="relative mx-auto mb-8" style={{ maxWidth: "60%" }}>
             <div className="w-full h-10 md:h-12 bg-gradient-to-b from-magenta/30 to-magenta/5 border-b-4 border-magenta rounded-t-[2rem] flex items-center justify-center shadow-[0_8px_25px_rgba(255,0,160,0.15)]">
@@ -483,36 +461,38 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
             <span>Parells (2, 4, 6...) →</span>
           </div>
 
-          {/* Graella de seients */}
-          <div className="flex flex-col gap-1 md:gap-1.5 items-center overflow-x-auto pb-4 pt-2">
-            {rowOrder.map((rowLabel) => {
-              const rowSeats = seatsByRow[rowLabel];
-              if (!rowSeats) return null;
-              const indent = indentMap[rowLabel] || 0;
-              const isPMRRow = rowLabel === "WC";
+          {/* Graella de seients - Container amb scroll horizontal */}
+          <div className="w-full overflow-x-auto rounded-lg border border-white/5 bg-black/30 p-4">
+            <div className="flex flex-col gap-2 md:gap-2.5 items-center pt-2 pb-4 min-w-max">
+              {rowOrder.map((rowLabel) => {
+                const rowSeats = seatsByRow[rowLabel];
+                if (!rowSeats) return null;
+                const indent = indentMap[rowLabel] || 0;
+                const isPMRRow = rowLabel === "WC";
 
-              return (
-                <div
-                  key={rowLabel}
-                  className={`flex items-center gap-0.5 md:gap-1 ${isPMRRow ? "mt-3 pt-3 border-t border-dashed border-cyan/20" : ""}`}
-                  style={{ paddingLeft: `${indent * 10}px`, paddingRight: `${indent * 10}px` }}
-                >
-                  <span className={`font-mono font-bold w-8 text-right text-[9px] pr-1 shrink-0 select-none ${isPMRRow ? "text-cyan/80" : "text-cyan/40"}`}>
-                    {isPMRRow ? "♿" : `F${rowLabel}`}
-                  </span>
+                return (
+                  <div
+                    key={rowLabel}
+                    className={`flex items-center gap-0.5 md:gap-1 ${isPMRRow ? "mt-3 pt-3 border-t border-dashed border-cyan/20" : ""}`}
+                    style={{ paddingLeft: `${indent * 10}px`, paddingRight: `${indent * 10}px` }}
+                  >
+                    <span className={`font-mono font-bold w-8 text-right text-[9px] pr-1 shrink-0 select-none ${isPMRRow ? "text-cyan/80" : "text-cyan/40"}`}>
+                      {isPMRRow ? "♿" : `F${rowLabel}`}
+                    </span>
 
-                  <div className="flex gap-[2px] md:gap-[3px]">
-                    {rowSeats.map((seat) => (
-                      <Seat key={seat.id} seat={seat} onClick={() => handleSeatClick(seat)} />
-                    ))}
+                    <div className="flex gap-1 md:gap-1.5">
+                      {rowSeats.map((seat) => (
+                        <Seat key={seat.id} seat={seat} onClick={() => handleSeatClick(seat)} />
+                      ))}
+                    </div>
+
+                    <span className={`font-mono font-bold w-8 text-left text-[9px] pl-1 shrink-0 select-none ${isPMRRow ? "text-cyan/80" : "text-cyan/40"}`}>
+                      {isPMRRow ? "♿" : `F${rowLabel}`}
+                    </span>
                   </div>
-
-                  <span className={`font-mono font-bold w-8 text-left text-[9px] pl-1 shrink-0 select-none ${isPMRRow ? "text-cyan/80" : "text-cyan/40"}`}>
-                    {isPMRRow ? "♿" : `F${rowLabel}`}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {/* Llegenda */}
@@ -596,6 +576,13 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
 
                 <Link
                   href="/checkout"
+                  onClick={() => {
+                    setProceedingToCheckout(true);
+                    // Asegurar que el concertId esté guardado al navegar a checkout
+                    if (!concertId) {
+                      console.warn("ConcertId not set before going to checkout");
+                    }
+                  }}
                   className="block w-full text-center py-3 bg-gradient-to-r from-cyan to-cyan/80 text-background font-bold uppercase tracking-widest rounded-xl text-sm transition-all hover:shadow-[0_0_25px_rgba(0,240,255,0.5)] hover:-translate-y-0.5 active:scale-95"
                 >
                   Continuar al Pagament →
@@ -639,24 +626,85 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
 // COMPONENT ZONA DRETA (STANDING) — Pista / Front Stage
 // ═══════════════════════════════════════════════════════
 function StandingZoneView({
+  zoneId,
   zoneName,
   sectionLabel,
   basePrice,
   onBack,
+  router
 }: {
   zoneId: string;
   zoneName: string;
   sectionLabel: string;
   basePrice: number;
   onBack: () => void;
+  router: ReturnType<typeof useRouter>;
 }) {
-  const [tickets, setTicketsLocal] = useState(1);
-  const totalPrice = basePrice * tickets;
+  const {
+    selectedSeats,
+    toggleSeatSelection,
+    purchasedCount,
+    setProceedingToCheckout,
+    clearSelection,
+    concertId
+  } = useTicketStore();
+  const { user } = useAuthStore();
+
+  const currentCount = selectedSeats.length;
+  const totalPrice = basePrice * currentCount;
+  const maxAllowed = 5 - purchasedCount;
+
+  const handleAdjustCount = (newCount: number) => {
+    if (newCount < 0 || newCount > maxAllowed) return;
+
+    if (newCount > currentCount) {
+      // Afegir seients virtuals
+      for (let i = currentCount; i < newCount; i++) {
+        const virtualSeat: SeatType = {
+          id: `V-${zoneId}-${i + 1}-${Date.now()}`, // ID únic temporal
+          row: zoneName,
+          col: i + 1,
+          zoneId: zoneId,
+          status: 'available',
+          price: basePrice
+        };
+
+        socket.emit('seat:toggle', {
+          concertId,
+          zoneId,
+          seatId: virtualSeat.id,
+          userId: user?.id || 'anonymous'
+        });
+        toggleSeatSelection(virtualSeat);
+      }
+    } else if (newCount < currentCount) {
+      // Treure seients virtuals (els últims afegits)
+      const toRemove = selectedSeats.slice(newCount);
+      toRemove.forEach(seat => {
+        socket.emit('seat:toggle', {
+          concertId,
+          zoneId,
+          seatId: seat.id,
+          userId: user?.id || 'anonymous'
+        });
+        toggleSeatSelection(seat);
+      });
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
-        <button onClick={onBack} className="flex items-center gap-2 text-cyan hover:text-white transition-colors group text-sm">
+        <button
+          onClick={() => {
+            if (selectedSeats.length > 0) {
+              socket.emit('seat:release_all', { concertId: concertId });
+              clearSelection();
+            }
+            onBack();
+          }}
+          className="flex items-center gap-2 text-cyan hover:text-white transition-colors group text-sm"
+        >
           <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -673,7 +721,7 @@ function StandingZoneView({
 
       <div className="max-w-lg mx-auto">
         <div className="bg-surface p-6 md:p-8 rounded-2xl border border-cyan/20 shadow-[0_0_30px_rgba(0,240,255,0.05)]">
-          
+
           {/* Indicador visual de zona dreta */}
           <div className="w-full aspect-[16/9] rounded-xl bg-gradient-to-b from-magenta/10 via-cyan/5 to-background border border-white/5 mb-6 flex flex-col items-center justify-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-10">
@@ -688,14 +736,14 @@ function StandingZoneView({
             <svg className="w-16 h-16 text-cyan/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <p className="text-cyan/60 font-bold text-lg uppercase tracking-widest">Zona Dreta</p>
-            <p className="text-gray-500 text-xs mt-1">Sense seients numerats · Entrada general</p>
+            <p className="text-cyan/60 font-bold text-lg uppercase tracking-widest">Entrada Standing</p>
+            <p className="text-gray-500 text-xs mt-1">Sense seients numerats · Zona de pista</p>
           </div>
 
           {/* Preu */}
           <div className="bg-background rounded-xl p-4 border border-cyan/20 mb-6">
             <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm">Preu per entrada</span>
+              <span className="text-gray-400 text-sm">Preu unitari</span>
               <span className="text-cyan text-xl font-bold">{basePrice}€</span>
             </div>
           </div>
@@ -705,26 +753,28 @@ function StandingZoneView({
             <label className="block text-sm text-gray-400 font-medium mb-2">Quantitat d&apos;entrades</label>
             <div className="flex items-center gap-4 bg-background border border-white/10 rounded-lg p-2">
               <button
-                onClick={() => setTicketsLocal(Math.max(1, tickets - 1))}
-                className="w-10 h-10 rounded-md bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors"
-                disabled={tickets <= 1}
+                onClick={() => handleAdjustCount(currentCount - 1)}
+                className="w-12 h-12 rounded-md bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors disabled:opacity-20"
+                disabled={currentCount <= 0}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                 </svg>
               </button>
-              <span className="flex-1 text-center font-bold text-xl">{tickets}</span>
+              <span className="flex-1 text-center font-bold text-2xl">{currentCount}</span>
               <button
-                onClick={() => setTicketsLocal(Math.min(6, tickets + 1))}
-                className="w-10 h-10 rounded-md bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors"
-                disabled={tickets >= 6}
+                onClick={() => handleAdjustCount(currentCount + 1)}
+                className="w-12 h-12 rounded-md bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors disabled:opacity-20"
+                disabled={currentCount >= maxAllowed}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">Màxim 5 entrades per persona</p>
+            <p className="text-[10px] text-gray-500 mt-3 text-center uppercase tracking-widest font-mono">
+              Límit: 5 entrades per concert {purchasedCount > 0 && `(ja en tens ${purchasedCount})`}
+            </p>
           </div>
 
           {/* Total */}
@@ -736,12 +786,18 @@ function StandingZoneView({
           </div>
 
           {/* Botó */}
-          <Link
-            href="/checkout"
-            className="block w-full text-center py-4 bg-gradient-to-r from-cyan to-cyan/80 text-background font-bold uppercase tracking-widest rounded-xl transition-all hover:shadow-[0_0_25px_rgba(0,240,255,0.5)] hover:-translate-y-0.5 active:scale-95"
+          <button
+            onClick={() => {
+              if (currentCount > 0) {
+                setProceedingToCheckout(true);
+                router.push('/checkout');
+              }
+            }}
+            disabled={currentCount === 0}
+            className="block w-full text-center py-4 bg-gradient-to-r from-cyan to-cyan/80 text-background font-bold uppercase tracking-widest rounded-xl transition-all hover:shadow-[0_0_25px_rgba(0,240,255,0.5)] hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
             Continuar al Pagament →
-          </Link>
+          </button>
         </div>
       </div>
     </div>

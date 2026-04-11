@@ -3,11 +3,46 @@
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter, usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { useTicketStore } from "@/store/useTicketStore";
+import { socket } from "@/lib/socket";
 
 export default function Navbar() {
   const { user, isAuthenticated, clearAuth } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
+  const { selectedSeats, clearSelection } = useTicketStore();
+
+  // Vigilant de navegació i tancament: Si sortim del flow de compra, alliberem butaques
+  useEffect(() => {
+    const isBookingFlow = pathname.startsWith('/events/') || pathname === '/checkout';
+    
+    // 1. Tancament de pestanya o refresc
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const state = useTicketStore.getState();
+      if (state.selectedSeats.length > 0 && !state.isProceedingToCheckout) {
+        // Nota: Les peticions asíncrones en beforeunload són poc fiables, 
+        // però socket.emit acostuma a funcionar si el servidor és ràpid.
+        socket.emit('seat:release_all', { concertId: state.concertId });
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // 2. Canvi de ruta (Client-side navigation)
+    if (!isBookingFlow && selectedSeats.length > 0) {
+      const state = useTicketStore.getState();
+      socket.emit('seat:release_all', { concertId: state.concertId || null });
+      clearSelection();
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [pathname, selectedSeats.length, clearSelection]);
+
 
   // No mostrem la Navbar a les pàgines d'autenticació
   if (pathname === '/login' || pathname === '/register') {
@@ -40,7 +75,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Lado izquierdo: Logo */}
         <Link 
-          href="/" 
+          href={pathname.startsWith('/admin') ? '/admin' : '/'} 
           className="text-2xl font-bold tracking-tighter text-cyan drop-shadow-[0_0_8px_rgba(0,240,255,0.8)] transition-all hover:drop-shadow-[0_0_12px_rgba(0,240,255,1)]"
         >
           TixFlow

@@ -13,20 +13,20 @@ export default function Seat({ seat, onClick }: SeatProps) {
 
   // Espai buit de passadís
   if (seat.isAisle) {
-    return <div className="w-6 h-8 md:w-7 md:h-9" aria-hidden="true" />;
+    return <div className="w-8 h-10 md:w-9 md:h-11" aria-hidden="true" />;
   }
 
   const isLimitReached = (selectedSeats.length + purchasedCount) >= 5;
 
   // Colors segons la semàntica indicada:
   const getColorClass = () => {
-    if (isSelected || seat.status === 'mine') return 'bg-blue-500 border-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.8)]';
+    if (isSelected || seat.status === 'mine') return 'bg-blue-500 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,1)]';
     if (seat.status === 'available') {
-        if (isLimitReached && !isSelected) return 'bg-gray-700 border-gray-600 opacity-50 cursor-not-allowed';
-        return 'bg-green-500 border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.8)] cursor-pointer';
+      if (isLimitReached && !isSelected) return 'bg-gray-600 border-gray-500 opacity-40 cursor-not-allowed shadow-none';
+      return 'bg-green-500 border-green-400 hover:shadow-[0_0_20px_rgba(34,197,94,1)] hover:scale-110 cursor-pointer';
     }
-    if (seat.status === 'reserved') return 'bg-yellow-500 border-yellow-400 cursor-not-allowed';
-    if (seat.status === 'sold') return 'bg-red-600 border-red-800 cursor-not-allowed shadow-[inset_0_0_10px_rgba(0,0,0,0.3)]';
+    if (seat.status === 'reserved') return 'bg-yellow-500 border-yellow-400 cursor-not-allowed shadow-[0_0_10px_rgba(234,179,8,0.5)]';
+    if (seat.status === 'sold') return 'bg-red-700 border-red-900 cursor-not-allowed shadow-[inset_0_0_8px_rgba(0,0,0,0.5)] opacity-60';
     return 'bg-surface';
   };
 
@@ -41,35 +41,35 @@ export default function Seat({ seat, onClick }: SeatProps) {
     return (
       <button
         onClick={handleSeatClick}
-        disabled={seat.status === 'sold' || seat.status === 'reserved'}
+        disabled={seat.status === 'sold' || seat.status === 'reserved' || (isLimitReached && !isSelected)}
         title={`PMR ${seat.id} - ${seat.price}€ (Mobilitat Reduïda)`}
         className={`
-          w-12 h-8 md:w-14 md:h-9 rounded-lg
+          w-14 h-10 md:w-16 md:h-11 rounded-lg
           flex items-center justify-center gap-0.5
-          text-[9px] font-bold text-white
+          text-[9px] md:text-[10px] font-bold text-white
           border-2 transition-all duration-200
           ${getColorClass()}
         `}
       >
-        <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm-1 5.5c-.8 0-1.5.7-1.5 1.5v4.5L6 16l1.4 1.4L11 14v-2h2v6.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5V11h2.5l1-3H11z"/>
+        <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm-1 5.5c-.8 0-1.5.7-1.5 1.5v4.5L6 16l1.4 1.4L11 14v-2h2v6.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5V11h2.5l1-3H11z" />
         </svg>
         <span className="hidden md:inline">{seat.col}</span>
       </button>
     );
   }
 
-  // Normal seat
+  // Normal seat - Improved visuals
   return (
     <button
       onClick={handleSeatClick}
-      disabled={seat.status === 'sold' || seat.status === 'reserved'}
+      disabled={seat.status === 'sold' || seat.status === 'reserved' || (isLimitReached && !isSelected)}
       title={`Seient ${seat.id} - ${seat.price}€`}
       className={`
-        w-6 h-8 md:w-7 md:h-9 rounded-t-md rounded-b-sm
+        w-8 h-10 md:w-9 md:h-11 rounded-md
         flex items-center justify-center
-        text-[8px] md:text-[9px] font-semibold text-white
-        border-t-[3px] transition-all duration-200
+        text-[8px] md:text-[9px] font-bold text-white
+        border-2 transition-all duration-150
         ${getColorClass()}
       `}
     >

@@ -8,24 +8,55 @@ import VenueMapRouter from "@/components/VenueMapRouter";
 import ZoneSeatMap from "@/components/ZoneSeatMap";
 import { MapZone } from "@/types/map";
 import { useTicketStore } from "@/store/useTicketStore";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function EventPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { events, setEvents, setConnected, setError, setLastUpdated } = useConcertStore();
-  const { clearSelection, selectedSeats } = useTicketStore();
+  const { clearSelection, selectedSeats, setConcertId } = useTicketStore();
+  const { user, token } = useAuthStore();
 
   const [selectedZone, setSelectedZone] = useState<MapZone | null>(null);
   const [tickets, setTickets] = useState<number>(1);
   const [showSeatMap, setShowSeatMap] = useState(false);
+  const [purchasedCount, setPurchasedCount] = useState(0);
+  const [isLoadingLimit, setIsLoadingLimit] = useState(false);
 
   // Trobar l'event actiu
   const event = events.find((e) => e.id === params.id);
 
-  // Detectar si és un recinte amb selecció de butaques
-  const isPalauSantJordi = event
-    ? (event.venueGroup || event.venue || "").toLowerCase().includes("palau sant jordi")
-    : false;
+  useEffect(() => {
+    if (params.id) {
+      setConcertId(params.id);
+    }
+  }, [params.id, setConcertId]);
+
+  // Cargar el contador de entradas ya compradas
+  useEffect(() => {
+    if (params.id && user && token) {
+      setIsLoadingLimit(true);
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/concerts/${params.id}/user-count`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.count !== undefined) {
+            setPurchasedCount(data.count);
+          }
+        })
+        .catch(err => console.error("Error carregant límit de compres:", err))
+        .finally(() => setIsLoadingLimit(false));
+    }
+  }, [params.id, user, token]);
+
+  // Detectar si és un recinte amb selecció de butaques o zones interactives
+  const venueLower = (event.venueGroup || event.venue || "").toLowerCase();
+  const isInteractiveVenue =
+    venueLower.includes("palau sant jordi") ||
+    venueLower.includes("sant jordi club") ||
+    venueLower.includes("razzmatazz");
+
 
   // Inicialitzem la connexió Socket si venim directament a aquesta URL
   useEffect(() => {
@@ -74,7 +105,7 @@ export default function EventPage() {
   // Handler per canviar de zona (reseteja seat map)
   const handleZoneSelect = (zone: MapZone | null) => {
     setSelectedZone(zone);
-    if (zone && isPalauSantJordi) {
+    if (zone && isInteractiveVenue) {
       setShowSeatMap(true);
     } else {
       setShowSeatMap(false);
@@ -121,23 +152,22 @@ export default function EventPage() {
             <span className="capitalize">
               {event.dateTime
                 ? new Date(event.dateTime).toLocaleString("ca-ES", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
                 : "Data per confirmar"}
             </span>
           </div>
         </div>
       </div>
 
+      {/* MODE SEAT MAP: Quan l'usuari ha escollit zona interactiva */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      {/* MODE SEAT MAP: Quan l'usuari ha escollit zona al Palau Sant Jordi */}
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {showSeatMap && selectedZone && isPalauSantJordi ? (
+      {showSeatMap && selectedZone && isInteractiveVenue ? (
         <ZoneSeatMap
           concertId={params.id}
           zoneId={selectedZone.id}
@@ -202,30 +232,44 @@ export default function EventPage() {
                     <div className="text-lg font-bold text-white tracking-widest uppercase">{selectedZone.name}</div>
                   </div>
 
-                  {/* ═══ PALAU SANT JORDI: Botó per entrar a la zona ═══ */}
-                  {isPalauSantJordi ? (() => {
+                  {/* ═══ RECINTES INTERACTIUS: Botó per entrar a la zona ═══ */}
+                  {isInteractiveVenue ? (() => {
                     const isStanding = selectedZone.id === 'pista-general' || selectedZone.id === 'front-stage';
+                    const hasMaxTickets = purchasedCount >= 5;
+
                     return (
-                      <button
-                        onClick={() => setShowSeatMap(true)}
-                        className="w-full mt-2 bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
-                      >
-                        {isStanding ? (
-                          <>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            Comprar Entrades
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            Escollir Butaca
-                          </>
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => setShowSeatMap(true)}
+                          disabled={hasMaxTickets}
+                          className={`w-full mt-2 font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all active:scale-95 flex items-center justify-center gap-3 ${hasMaxTickets
+                              ? 'bg-red-900/50 text-red-300 cursor-not-allowed border border-red-500/30 hover:shadow-none'
+                              : 'bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] hover:-translate-y-1'
+                            }`}
+                        >
+                          {isStanding ? (
+                            <>
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              Comprar Entrades
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              Escollir Butaca
+                            </>
+                          )}
+                        </button>
+                        {hasMaxTickets && (
+                          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm text-center">
+                            <span className="font-bold block mb-1">✗ Límit assolit</span>
+                            <span className="text-xs">Ja has comprat el màxim de 5 entrades per aquest concert.</span>
+                          </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })() : (
                     /* ═══ ALTRES RECINTES: Quantitat + Pagament directe ═══ */
@@ -265,12 +309,24 @@ export default function EventPage() {
                       </div>
 
                       {/* BOTÓ PAGO */}
-                      <button className="w-full mt-2 bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2">
+                      <button
+                        disabled={purchasedCount >= 5}
+                        className={`w-full mt-2 font-bold uppercase tracking-widest py-4 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all active:scale-95 flex items-center justify-center gap-2 ${purchasedCount >= 5
+                            ? 'bg-red-900/50 text-red-300 cursor-not-allowed border border-red-500/30 hover:shadow-none'
+                            : 'bg-gradient-to-r from-cyan to-cyan/80 hover:from-cyan/90 hover:to-cyan text-background hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] hover:-translate-y-1'
+                          }`}
+                      >
                         Continuar al Pagament
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
                       </button>
+                      {purchasedCount >= 5 && (
+                        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm text-center mt-2">
+                          <span className="font-bold block mb-1">✗ Límit assolit</span>
+                          <span className="text-xs">Ja has comprat el màxim de 5 entrades per aquest concert.</span>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
