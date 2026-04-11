@@ -15,7 +15,7 @@ export default function CheckoutPage() {
   const selectedSeatsInfo = selectedSeats;
   const totalPrice = selectedSeatsInfo.reduce((sum, seat) => sum + seat.price, 0);
 
-  // Redirigir a la home si no hi ha seient
+  // Redirigir a la home si no hi ha seients
   useEffect(() => {
     if (selectedSeats.length === 0 && !isProcessing) {
       router.push('/');
