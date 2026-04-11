@@ -12,7 +12,7 @@ services:
     container_name: entrades_webserver_prod
     restart: always
     ports:
-      - "80:80"
+      - "8080:80"
       - "443:443"
     volumes:
       - ./docker/nginx/default.prod.conf:/etc/nginx/templates/default.conf.template:ro
