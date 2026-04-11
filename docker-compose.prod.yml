@@ -13,7 +13,6 @@ services:
     restart: always
     ports:
       - "8080:80"
-      - "443:443"
     volumes:
       - ./docker/nginx/default.prod.conf:/etc/nginx/templates/default.conf.template:ro
       - api_storage:/var/www/html/storage:ro
