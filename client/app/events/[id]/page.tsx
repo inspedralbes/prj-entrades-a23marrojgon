@@ -32,7 +32,7 @@ export default function EventPage() {
     }
   }, [params.id, setConcertId]);
 
-  // Cargar el contador de entradas ya compradas
+  // Cargar el contador de entradas ya comprada
   useEffect(() => {
     if (params.id && user && token) {
       setIsLoadingLimit(true);
