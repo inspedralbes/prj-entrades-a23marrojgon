@@ -27,6 +27,7 @@ export default function SeatMap() {
             id: `${r}${c}`,
             row: r,
             col: c,
+            zoneId: 'main',
             status,
             price: r === 'A' || r === 'B' ? 75 : (r === 'C' || r === 'D' ? 55 : 35),
           });
