@@ -18,8 +18,8 @@ jobs:
           port: 22
           script: |
             # 1. Entrar en la carpeta o clonar si no existe
-            cd /root/tr3 || git clone https://github.com/${{ github.repository }}.git /root/tr3
-            cd /root/tr3
+            cd /root/prj-entrades-a23marrojgon || git clone https://github.com/${{ github.repository }}.git /root/prj-entrades-a23marrojgon
+            cd /root/prj-entrades-a23marrojgon
             
             # 2. Bajar los cambios nuevos
             git pull origin main
