@@ -24,13 +24,13 @@ jobs:
             # 2. Bajar los cambios nuevos
             git pull origin main
             
-            # 3. Encender los contenedores Docker
+            # 3. Limpieza preventiva y arranque (Evita conflictos)
+            docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml up --build -d
             
-            # 4. Migraciones y limpieza de caché (Laravel)
+            # 4. Migraciones y limpieza profunda (Laravel)
             docker compose -f docker-compose.prod.yml exec -T api php artisan migrate --force
-            docker compose -f docker-compose.prod.yml exec -T api php artisan config:cache
-            docker compose -f docker-compose.prod.yml exec -T api php artisan route:cache
+            docker compose -f docker-compose.prod.yml exec -T api php artisan optimize
             
             # 5. Limpiar basura de imágenes viejas
             docker image prune -f
