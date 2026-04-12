@@ -15,9 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
-
-        // Forzar a que las peticiones de API devuelvan 401 en vez de redirigir a /login
-        $middleware->redirectGuestsTo(fn () => null);
+        
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
