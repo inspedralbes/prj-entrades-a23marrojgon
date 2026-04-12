@@ -55,6 +55,9 @@ services:
     build:
       context: ./client
       target: production
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
     container_name: entrades_client_prod
     restart: always
     env_file: .env
