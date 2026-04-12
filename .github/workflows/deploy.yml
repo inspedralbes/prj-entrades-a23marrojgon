@@ -27,5 +27,10 @@ jobs:
             # 3. Encender los contenedores Docker
             docker compose -f docker-compose.prod.yml up --build -d
             
-            # 4. Limpiar basura de imágenes viejas
+            # 4. Migraciones y limpieza de caché (Laravel)
+            docker compose -f docker-compose.prod.yml exec -T api php artisan migrate --force
+            docker compose -f docker-compose.prod.yml exec -T api php artisan config:cache
+            docker compose -f docker-compose.prod.yml exec -T api php artisan route:cache
+            
+            # 5. Limpiar basura de imágenes viejas
             docker image prune -f
