@@ -15,9 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
-        
-        // Sanctum stateful para SPA
-        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
