@@ -16,13 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
         
-        $middleware->redirectTo(
-            guest: '/', // Fallback para web
-        );
-
-        // Aseguramos que las peticiones API no redirijan a login si no son JSON
-        // Laravel 11/13 detecta Accept: application/json automáticamente, 
-        // pero esto previene errores 500 si el cliente olvida la cabecera.
+        // Sanctum stateful para SPA
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
