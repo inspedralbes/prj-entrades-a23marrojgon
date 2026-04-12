@@ -64,24 +64,21 @@ class CheckoutController extends Controller
                     ], 400);
                 }
 
-                // 3️⃣ 🔐 VERIFICAR DISPONIBILIDAD ASIENTOS (CRÍTICO para concurrencia)
-                // Contar cuántos asientos ya existen como "confirmados"
-                $alreadySoldCount = Ticket::where('concert_id', $concert->id)
-                ->where('status', 'confirmed')
-                ->where(function($query) use ($seatIds) {
-                    foreach ($seatIds as $id) {
-                        $query->orWhereRaw("seat_info->>'id' = ?", [(string)$id]);
-                    }
-                })
-                ->count();
+                // 3️⃣ 🔐 VERIFICAR DISPONIBILIDAD ASIENTOS (SIMPLIFICADO PARA POSTGRESQL)
+                foreach ($seatIds as $id) {
+                    $isSold = Ticket::where('concert_id', $concert->id)
+                        ->where('status', 'confirmed')
+                        ->whereRaw("seat_info->>'id' = ?", [(string)$id])
+                        ->exists();
 
-                if ($alreadySoldCount > 0) {
-                    return response()->json([
-                        'message' => 'Alguno de los asientos que intentas comprar ya ha sido vendido. Por favor selecciona otros.'
-                    ], 409); // 409 Conflict
+                    if ($isSold) {
+                        return response()->json([
+                            'message' => "El seient $id ja està venut. Si us plau, selecciona'n un altre."
+                        ], 409);
+                    }
                 }
 
-                // 4️⃣ CREAR TICKETS (ahora sí que sabemos que están disponibles)
+                // 4️⃣ CREAR TICKETS
                 $totalPrice = 0;
                 $ticketsCreated = [];
 
@@ -102,18 +99,8 @@ class CheckoutController extends Controller
                     $ticketsCreated[] = $ticket;
                     $totalPrice += $seat['price'];
 
-                    // 5️⃣ NOTIFICAR SOCKETS (dentro de transacción)
-                    try {
-                        \Illuminate\Support\Facades\Redis::publish('ticket:sold', json_encode([
-                            'concertId' => $concert->tm_id ?? $concert->id,
-                            'zoneId' => $seat['zone'] ?? 'Unknown',
-                            'seatId' => $seat['id'],
-                            'status' => 'sold'
-                        ]));
-                    } catch (\Exception $e) {
-                        Log::error("Error Redis: " . $e->getMessage());
-                        // Continuamos, pero lo registramos
-                    }
+                    // 5️⃣ NOTIFICAR SOCKETS (Temporalment desactivat per estabilitat total)
+                    // La notificació ja la fa el front-end quan rep el OK
                 }
 
                 // 6️⃣ ENVIAR EMAIL (Temporalment desactivat per descartar errors de servidor de correu)
