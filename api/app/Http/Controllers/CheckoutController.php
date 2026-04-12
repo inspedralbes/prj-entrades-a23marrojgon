@@ -67,12 +67,13 @@ class CheckoutController extends Controller
 
                 // 3️⃣ 🔐 VERIFICAR DISPONIBILIDAD ASIENTOS (CRÍTICO para concurrencia)
                 // Contar cuántos asientos ya existen como "confirmados"
-                $alreadySoldCount = Ticket::whereIn(
-                    DB::raw("seat_info->>'id'"), // PostgreSQL JSON query
-                    $seatIds
-                )
-                ->where('concert_id', $concert->id)
+                $alreadySoldCount = Ticket::where('concert_id', $concert->id)
                 ->where('status', 'confirmed')
+                ->where(function($query) use ($seatIds) {
+                    foreach ($seatIds as $id) {
+                        $query->orWhereRaw("seat_info->>'id' = ?", [(string)$id]);
+                    }
+                })
                 ->lockForUpdate() // 🔒 Bloquea estos registros
                 ->count();
 
@@ -91,12 +92,12 @@ class CheckoutController extends Controller
                         'user_id' => $user->id,
                         'concert_id' => $concert->id,
                         'price' => $seat['price'],
-                        'seat_info' => json_encode([
+                        'seat_info' => [
                             'id' => $seat['id'],
                             'row' => $seat['row'],
                             'col' => $seat['col'],
                             'zone' => $seat['zone'] ?? 'Unknown',
-                        ]),
+                        ],
                         'status' => 'confirmed',
                     ]);
                     
