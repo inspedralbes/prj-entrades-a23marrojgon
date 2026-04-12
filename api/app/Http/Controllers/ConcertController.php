@@ -139,10 +139,10 @@ class ConcertController extends Controller
         if (!$user) return response()->json(['count' => 0]);
 
         $count = \App\Models\Ticket::where('user_id', $user->id)
-            ->where('concert_id', function($query) use ($concertId) {
+            ->whereIn('concert_id', function($query) use ($concertId) {
                 $query->select('id')->from('concerts')
                     ->where('tm_id', $concertId)
-                    ->orWhere('id', is_numeric($concertId) ? $concertId : -1);
+                    ->orWhere('id', is_numeric($concertId) ? (int)$concertId : -1);
             })
             ->where('status', 'confirmed')
             ->count();
@@ -156,10 +156,10 @@ class ConcertController extends Controller
         if (!$user) return response()->json(['tickets' => []]);
 
         $tickets = \App\Models\Ticket::where('user_id', $user->id)
-            ->where('concert_id', function($query) use ($concertId) {
+            ->whereIn('concert_id', function($query) use ($concertId) {
                 $query->select('id')->from('concerts')
                     ->where('tm_id', $concertId)
-                    ->orWhere('id', is_numeric($concertId) ? $concertId : -1);
+                    ->orWhere('id', is_numeric($concertId) ? (int)$concertId : -1);
             })
             ->where('status', 'confirmed')
             ->get();
