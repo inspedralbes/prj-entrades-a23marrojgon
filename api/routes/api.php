@@ -11,43 +11,6 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/concerts', [ConcertController::class, 'index']);
 
-// Diagnostic route for Mail
-Route::get('/test-mail', function () {
-    try {
-        $email = request('email', 'marcrojanog@gmail.com');
-        $config = [
-            'mailer' => config('mail.default'),
-            'host' => config('mail.mailers.smtp.host'),
-            'port' => config('mail.mailers.smtp.port'),
-            'user' => config('mail.mailers.smtp.username'),
-            'encryption' => config('mail.mailers.smtp.encryption'),
-        ];
-
-        \Illuminate\Support\Facades\Mail::raw("TixFlow Test - Confirma que la configuració SMTP funciona.", function ($message) use ($email) {
-            $message->to($email)
-                    ->subject('TixFlow Diagnostic Test');
-        });
-        
-        return response()->json([
-            'status' => 'success', 
-            'message' => "Correu enviat a $email!",
-            'active_config' => $config
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'active_config' => [
-                'mailer' => config('mail.default'),
-                'host' => config('mail.mailers.smtp.host'),
-                'port' => config('mail.mailers.smtp.port'),
-                'user' => config('mail.mailers.smtp.username'),
-            ],
-            'hint' => 'Si el host NO és smtp.gmail.com, revisa el teu .env i reinicia el docker.'
-        ], 500);
-    }
-});
-
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
