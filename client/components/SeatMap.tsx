@@ -6,7 +6,7 @@ import Seat from './Seat';
 import Link from 'next/link';
 
 export default function SeatMap() {
-  const { seats, setSeats, selectedSeatIds } = useTicketStore();
+  const { seats, setSeats, selectedSeats } = useTicketStore();
 
   useEffect(() => {
     // Generar dades Mock al muntatge només la primera vegada
@@ -43,8 +43,8 @@ export default function SeatMap() {
     return acc;
   }, {} as Record<string, SeatType[]>);
 
-  // Calcular total
-  const selectedSeatsInfo = seats.filter(s => selectedSeatIds.includes(s.id));
+  // Calcular total - ara usem directament selectedSeats del store
+  const selectedSeatsInfo = selectedSeats;
   const totalPrice = selectedSeatsInfo.reduce((sum, seat) => sum + seat.price, 0);
 
   return (
@@ -97,7 +97,7 @@ export default function SeatMap() {
         <div className="bg-surface p-6 rounded-xl border border-cyan/20 sticky top-24">
           <h3 className="text-xl font-bold mb-4 text-cyan border-b border-cyan/20 pb-2">Selecció Actual</h3>
           
-          {selectedSeatIds.length === 0 ? (
+          {selectedSeats.length === 0 ? (
             <p className="text-gray-400 text-sm">No has seleccionat cap seient encara. Fes clic al mapa per començar.</p>
           ) : (
             <>
@@ -121,7 +121,7 @@ export default function SeatMap() {
                 href="/checkout"
                 className="block w-full text-center py-3 bg-cyan text-background font-bold uppercase tracking-wider rounded transition-all hover:bg-cyan/90 hover:shadow-[0_0_20px_rgba(0,240,255,0.5)]"
               >
-                Continuar ({selectedSeatIds.length})
+                Continuar ({selectedSeats.length})
               </Link>
             </>
           )}
