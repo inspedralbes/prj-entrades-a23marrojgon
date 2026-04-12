@@ -11,6 +11,27 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/concerts', [ConcertController::class, 'index']);
 
+// Diagnostic route for Mail
+Route::get('/test-mail', function () {
+    try {
+        $email = request('email', 'marcrojanog@gmail.com');
+        \Illuminate\Support\Facades\Mail::raw("TixFlow Test - Aquest correu confirma que la configuració SMTP funciona correctament a producció.", function ($message) use ($email) {
+            $message->to($email)
+                    ->subject('TixFlow Diagnostic Test');
+        });
+        return response()->json([
+            'status' => 'success', 
+            'message' => "Correu enviat correctament a $email! Revisa la teva bústia (i la carpeta de Spam)."
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'hint' => 'Assegura\'t que estas usant una "App Password" de Gmail i que el MAIL_MAILER és "smtp".'
+        ], 500);
+    }
+});
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
