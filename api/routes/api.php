@@ -8,7 +8,7 @@ use App\Http\Controllers\AdminController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/concerts', [ConcertController::class, 'index']);
 
 // Protected routes
