@@ -15,7 +15,7 @@ CMD ["php-fpm"]
 FROM php:8.3-fpm-alpine AS production
 WORKDIR /var/www/html
 RUN apk add --no-cache postgresql-dev zip unzip libpng-dev libzip-dev \
-    && docker-php-ext-install pdo pdo_pgsql opcache
+    && docker-php-ext-install pdo pdo_pgsql
 
 # Instal·lem Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
