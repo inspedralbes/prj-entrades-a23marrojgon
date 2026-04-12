@@ -42,7 +42,6 @@ export default function CheckoutPage() {
     }
 
     if (!currentConcertId) {
-      alert("Error: No es troba el codi del concert. Torna al mapa i torna a seleccionar.");
       setIsProcessing(false);
       return;
     }
@@ -88,7 +87,7 @@ export default function CheckoutPage() {
         });
       });
 
-      alert('¡Compra realitzada amb èxit! Rebràs un correu amb les teves entrades en uns segons.');
+      // Compra realitzada amb èxit
 
       clearSelection();
       setTimer(0, 0);
@@ -96,7 +95,7 @@ export default function CheckoutPage() {
 
     } catch (error: any) {
       console.error(error);
-      alert(`Error: ${error.message || 'Hi ha hagut un error processant el pagament.'}`);
+      // Error processant el pagament
     } finally {
       setIsProcessing(false);
     }
