@@ -11,9 +11,14 @@ const io = new Server(server, {
 });
 
 // Configurem Redis
+console.log('--- Intentant connexió a Redis ---');
+console.log('Host:', process.env.REDIS_HOST || 'localhost');
+console.log('Password configurada:', process.env.REDIS_PASSWORD ? 'SÍ' : 'NO');
+
 const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
-  port: 6379
+  port: 6379,
+  password: process.env.REDIS_PASSWORD || undefined
 });
 
 redis.on('error', (err) => console.error('Error de Redis:', err));
@@ -22,7 +27,8 @@ redis.on('connect', () => console.log('Connectat a Redis correctament ✅'));
 // Client Redis per a subscripcions (Pub/Sub)
 const redisSub = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
-  port: 6379
+  port: 6379,
+  password: process.env.REDIS_PASSWORD || undefined
 });
 
 redisSub.subscribe('ticket:sold', (err, count) => {
