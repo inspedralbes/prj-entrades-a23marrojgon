@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('concert_id')->constrained('concerts')->onDelete('cascade');
             $table->decimal('price', 8, 2);
-            $table->string('seat_info')->nullable();
+            $table->json('seat_info')->nullable();
             $table->string('status')->default('confirmed'); // confirmed, pending, cancelled
             $table->timestamps();
         });

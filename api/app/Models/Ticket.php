@@ -17,6 +17,13 @@ class Ticket extends Model
         'status',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'seat_info' => 'array',
+        ];
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
