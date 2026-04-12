@@ -327,7 +327,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
         }
 
         if (seatStatus !== 'available') {
-          updateSeatStatus(seatId, seatStatus, user?.id, String(value));
+          updateSeatStatus(seatId, seatStatus, user?.id ? String(user.id) : undefined, String(value));
         }
       });
     });
@@ -336,7 +336,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
     const handleUpdate = ({ zoneId: updateZoneId, seatId, status, userId: reservedByUserId }: { zoneId: string, seatId: string, status: string, userId?: string }) => {
       // Només actualitzem si és la nostra zona
       if (updateZoneId === zoneId) {
-        updateSeatStatus(seatId, status as any, user?.id, reservedByUserId);
+        updateSeatStatus(seatId, status as any, user?.id ? String(user.id) : undefined, reservedByUserId);
       }
     };
 
@@ -364,7 +364,7 @@ export default function ZoneSeatMap({ concertId, zoneId, zoneName, basePrice, on
       concertId,
       zoneId, // Enviem la zona per evitar collisions
       seatId: seat.id,
-      userId: user?.id || 'anonymous'
+      userId: user?.id ? String(user.id) : 'anonymous'
     });
 
     // Optimistic toggle local
@@ -673,7 +673,7 @@ function StandingZoneView({
           concertId,
           zoneId,
           seatId: virtualSeat.id,
-          userId: user?.id || 'anonymous'
+          userId: user?.id ? String(user.id) : 'anonymous'
         });
         toggleSeatSelection(virtualSeat);
       }
@@ -685,7 +685,7 @@ function StandingZoneView({
           concertId,
           zoneId,
           seatId: seat.id,
-          userId: user?.id || 'anonymous'
+          userId: user?.id ? String(user.id) : 'anonymous'
         });
         toggleSeatSelection(seat);
       });

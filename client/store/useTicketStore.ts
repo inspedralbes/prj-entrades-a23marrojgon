@@ -23,7 +23,7 @@ interface TicketStore {
   
   // Accions per actualitzar l'estat general (des dels WebSockets o API inicial)
   setSeats: (seats: Seat[]) => void;
-  updateSeatStatus: (seatId: string, status: SeatState, currentUserId?: string, reservedByUserId?: string) => void;
+  updateSeatStatus: (seatId: string, status: SeatState, currentUserId?: string | number, reservedByUserId?: string | number) => void;
   
   // Accions d'usuari local
   toggleSeatSelection: (seat: Seat) => void;
