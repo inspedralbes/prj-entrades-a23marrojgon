@@ -20,7 +20,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
     environment:
-      - DOMAIN=${DOMAIN}
+      - DOMAIN=tixflow.daw.inspedralbes.cat
     depends_on:
       - api
       - client
