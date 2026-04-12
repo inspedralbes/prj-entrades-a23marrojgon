@@ -37,6 +37,7 @@ services:
     restart: always
     env_file: .env
     volumes:
+      - .:/var/www/html
       - ./docker/php/php.prod.ini:/usr/local/etc/php/conf.d/custom.ini:ro
       - api_storage:/var/www/html/storage
     environment:
