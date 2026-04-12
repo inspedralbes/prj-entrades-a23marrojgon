@@ -53,6 +53,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('tixflow_token')}`
         },
         body: JSON.stringify({

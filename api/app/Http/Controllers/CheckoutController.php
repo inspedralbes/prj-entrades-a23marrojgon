@@ -116,7 +116,8 @@ class CheckoutController extends Controller
                     }
                 }
 
-                // 6️⃣ ENVIAR EMAIL (al final, si todo va bien)
+                // 6️⃣ ENVIAR EMAIL (Temporalment desactivat per descartar errors de servidor de correu)
+                /*
                 try {
                     Mail::to($request->input('email'))->send(
                         new TicketPurchased($ticketsCreated, $request->input('name'), $concert)
@@ -125,6 +126,7 @@ class CheckoutController extends Controller
                     Log::error("Error email: " . $e->getMessage());
                     // NO fallamos, pero lo anotamos
                 }
+                */
 
                 // 7️⃣ RESPUESTA EXITOSA
                 Log::info("Compra exitosa", [
@@ -146,7 +148,9 @@ class CheckoutController extends Controller
         } catch (\Exception $e) {
             Log::error("Checkout error: " . $e->getMessage());
             return response()->json([
-                'message' => 'Error processant la compra. Si us plau intenta-ho més tard.'
+                'message' => 'Error: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ], 500);
         }
     }
