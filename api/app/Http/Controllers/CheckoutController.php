@@ -43,7 +43,7 @@ class CheckoutController extends Controller
                 if (is_numeric($concertId)) {
                     $concert = $concert->orWhere('id', $concertId);
                 }
-                $concert = $concert->first();
+                $concert = $concert->lockForUpdate()->first();
 
                 if (!$concert) {
                     return response()->json([
@@ -56,7 +56,6 @@ class CheckoutController extends Controller
                 $existingTicketsCount = Ticket::where('user_id', $user->id)
                     ->where('concert_id', $concert->id)
                     ->where('status', 'confirmed')
-                    ->lockForUpdate() // 🔒 CRÍTICO: Bloquea esta fila mientras dure la transacción
                     ->count();
                     
                 if (($existingTicketsCount + count($seats)) > 5) {
@@ -74,7 +73,6 @@ class CheckoutController extends Controller
                         $query->orWhereRaw("seat_info->>'id' = ?", [(string)$id]);
                     }
                 })
-                ->lockForUpdate() // 🔒 Bloquea estos registros
                 ->count();
 
                 if ($alreadySoldCount > 0) {
