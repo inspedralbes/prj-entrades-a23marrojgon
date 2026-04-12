@@ -177,7 +177,7 @@
                 
                 @foreach($tickets as $ticket)
                     @php
-                        $info = json_decode($ticket->seat_info);
+                        $info = $ticket->seat_info;
                         $qrData = "TICKET:" . $ticket->id . "|CONCERT:" . $ticket->concert_id;
                         $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($qrData) . "&bgcolor=ffffff&color=000000&margin=1";
                         $concertImage = $concert && $concert->image_url ? $concert->image_url : 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=1000&auto=format&fit=crop';
@@ -219,11 +219,11 @@
                                             <tr>
                                                 <td width="50%">
                                                     <div class="info-label">SECTOR / ZONA</div>
-                                                    <div class="info-value" style="color: #ff00a0;">{{ strtoupper($info->zone) }}</div>
+                                                    <div class="info-value" style="color: #ff00a0;">{{ strtoupper($info['zone'] ?? 'Unknown') }}</div>
                                                 </td>
                                                 <td width="50%">
                                                     <div class="info-label"> FILA / BUTACA</div>
-                                                    <div class="info-value">{{ $info->row }} / {{ $info->col }}</div>
+                                                    <div class="info-value">{{ $info['row'] ?? '-' }} / {{ $info['col'] ?? '-' }}</div>
                                                 </td>
                                             </tr>
                                         </table>
