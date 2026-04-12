@@ -25,8 +25,8 @@ COPY . .
 # Instal·lem dependències de producció
 RUN composer install --no-dev --optimize-autoloader
 
-# Permisos per a Laravel (CRÍTIC per logs i sessions)
-RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+# Script de permisos (CRÍTIC)
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-CMD ["php-fpm"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
