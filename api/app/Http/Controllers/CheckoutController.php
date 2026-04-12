@@ -103,17 +103,16 @@ class CheckoutController extends Controller
                     // La notificació ja la fa el front-end quan rep el OK
                 }
 
-                // 6️⃣ ENVIAR EMAIL (Temporalment desactivat per descartar errors de servidor de correu)
-                /*
+                // 6️⃣ ENVIAR EMAIL
                 try {
                     Mail::to($request->input('email'))->send(
                         new TicketPurchased($ticketsCreated, $request->input('name'), $concert)
                     );
+                    Log::info("Email enviat correctament a: " . $request->input('email'));
                 } catch (\Exception $e) {
-                    Log::error("Error email: " . $e->getMessage());
-                    // NO fallamos, pero lo anotamos
+                    Log::error("Error enviant email: " . $e->getMessage());
+                    // NO bloqueamos la compra si el email falla, pero lo registramos
                 }
-                */
 
                 // 7️⃣ RESPUESTA EXITOSA
                 Log::info("Compra exitosa", [
