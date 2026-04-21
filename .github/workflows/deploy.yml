@@ -1,0 +1,36 @@
+name: Deploy a Produccion
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ejecutar comandos por SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Entrar en la carpeta o clonar si no existe
+            cd /root/prj-entrades-a23marrojgon || git clone https://github.com/${{ github.repository }}.git /root/prj-entrades-a23marrojgon
+            cd /root/prj-entrades-a23marrojgon
+            
+            # 2. Bajar los cambios nuevos
+            git pull origin main
+            
+            # 3. Limpieza preventiva y arranque (Evita conflictos)
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml up --build -d
+            
+            # 4. Migraciones y limpieza profunda (Laravel)
+            docker compose -f docker-compose.prod.yml exec -T api php artisan migrate --force
+            docker compose -f docker-compose.prod.yml exec -T api php artisan optimize
+            
+            # 5. Limpiar basura de imágenes viejas
+            docker image prune -f
